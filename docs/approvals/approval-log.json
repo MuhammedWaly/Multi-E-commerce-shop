@@ -43,5 +43,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary. Agents have filesystem write access."
+  },
+  {
+    "approval_id": "APR-0005",
+    "timestamp": "2026-10-20T01:34:57+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "PRODUCT_SELECTION_AUTHORIZATION",
+    "target_id": "ADR-0001",
+    "scope_description": "Explicit owner authorization of ADR-0001 selecting the Social-Interactive Multi-Store Commerce Platform (Social-Commerce-Hub) with independent merchant storefronts, interactive video/image discovery feed, and Stripe/PayPal checkout as the company's core product.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary. Agents have filesystem write access."
   }
 ]
