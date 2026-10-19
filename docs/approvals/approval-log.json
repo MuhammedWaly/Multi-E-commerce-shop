@@ -31,5 +31,17 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary. Agents have filesystem write access."
+  },
+  {
+    "approval_id": "APR-0004",
+    "timestamp": "2026-10-19T23:43:57+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "TASK_EXECUTION_AUTHORIZATION",
+    "target_id": "TASK-0001",
+    "scope_description": "Explicit owner authorization for TASK-0001 execution scope: Antigravity implements task lifecycle validation utility and runs isolated fixture tests; owner reviews all changes before the single local commit. Strictly excludes Phase 2, production operations, destructive actions, external services, or high-risk actions.",
+    "execution_mode": "Antigravity implements; owner reviews before commit",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary. Agents have filesystem write access."
   }
 ]
