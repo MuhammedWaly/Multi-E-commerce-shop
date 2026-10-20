@@ -1,8 +1,9 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SocialCommerce.Application.DTOs;
+using SocialCommerce.Api.Filters;
+using SocialCommerce.Application.Common;
 using SocialCommerce.Application.Interfaces;
 using SocialCommerce.Application.Payments;
-using SocialCommerce.Application.Payments.Models;
 using SocialCommerce.Infrastructure.Payments;
 using SocialCommerce.Infrastructure.Payments.PayPal;
 using SocialCommerce.Infrastructure.Persistence;
@@ -24,6 +25,34 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 // Register Payment Engine
 builder.Services.AddSingleton<IPaymentProvider, PayPalPaymentProvider>();
 builder.Services.AddSingleton<IPaymentProviderFactory, PaymentProviderFactory>();
+
+// Register Controllers with Global Exception & Validation Filters
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ApiExceptionFilterAttribute>();
+    options.Filters.Add<ValidateModelAttribute>();
+});
+
+// Configure standardized API model validation responses
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .Where(msg => !string.IsNullOrWhiteSpace(msg))
+            .ToList();
+
+        if (errors.Count == 0)
+        {
+            errors.Add("Invalid model state.");
+        }
+
+        var response = ApiResponse<object>.Fail(errors, "Model validation failed.");
+        return new BadRequestObjectResult(response);
+    };
+});
 
 // Enable CORS for React Web Frontend
 builder.Services.AddCors(options =>
@@ -54,173 +83,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 
-// ==========================================
-// 1. Interactive Feed Endpoints
-// ==========================================
-app.MapGet("/api/feed", async (int? page, int? pageSize, ICatalogService catalogService, CancellationToken ct) =>
-{
-    var p = page.GetValueOrDefault(1);
-    var size = pageSize.GetValueOrDefault(20);
-    var feed = await catalogService.GetFeedAsync(p, size, ct);
-    return Results.Ok(feed);
-})
-.WithName("GetFeed");
-
-// ==========================================
-// 2. Merchant Store Setup & Management
-// ==========================================
-app.MapPost("/api/merchants", async (CreateMerchantRequest request, ICatalogService catalogService, CancellationToken ct) =>
-{
-    try
-    {
-        var merchant = await catalogService.CreateMerchantAsync(request, ct);
-        return Results.Created($"/api/merchants/{merchant.Slug}", merchant);
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("CreateMerchant");
-
-app.MapGet("/api/merchants/{slug}", async (string slug, ICatalogService catalogService, CancellationToken ct) =>
-{
-    var merchant = await catalogService.GetMerchantBySlugAsync(slug, ct);
-    return merchant is not null ? Results.Ok(merchant) : Results.NotFound(new { error = "Merchant store not found." });
-})
-.WithName("GetMerchantBySlug");
-
-app.MapPost("/api/merchants/{merchantId:guid}/products", async (Guid merchantId, AddProductRequest request, ICatalogService catalogService, CancellationToken ct) =>
-{
-    try
-    {
-        var product = await catalogService.AddProductAsync(merchantId, request, ct);
-        return Results.Created($"/api/products/{product.Id}", product);
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("AddProduct");
-
-// ==========================================
-// 3. Orders & Checkout Lifecycle Endpoints
-// ==========================================
-app.MapPost("/api/orders", async (CreateOrderRequest request, IOrderService orderService, CancellationToken ct) =>
-{
-    try
-    {
-        var order = await orderService.CreateOrderAsync(request, ct);
-        return Results.Created($"/api/orders/{order.Id}", order);
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("CreateOrder");
-
-app.MapGet("/api/orders/{id:guid}", async (Guid id, IOrderService orderService, CancellationToken ct) =>
-{
-    var order = await orderService.GetOrderByIdAsync(id, ct);
-    return order is not null ? Results.Ok(order) : Results.NotFound(new { error = "Order not found." });
-})
-.WithName("GetOrderById");
-
-app.MapPost("/api/orders/{id:guid}/capture", async (Guid id, CaptureOrderRequest request, IOrderService orderService, CancellationToken ct) =>
-{
-    var result = await orderService.CaptureOrderAsync(id, request, ct);
-    return result.IsSuccess 
-        ? Results.Ok(result) 
-        : Results.BadRequest(new { error = result.ErrorMessage, status = result.Status });
-})
-.WithName("CaptureOrder");
-
-app.MapPatch("/api/orders/{id:guid}/status", async (Guid id, UpdateOrderStatusRequest request, IOrderService orderService, CancellationToken ct) =>
-{
-    try
-    {
-        var order = await orderService.UpdateOrderStatusAsync(id, request.Status, ct);
-        return Results.Ok(order);
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("UpdateOrderStatus");
-
-// Legacy fast checkout simulation endpoint for frontend compatibility
-app.MapPost("/api/payments/create-order", async (PaymentOrderRequest request, IPaymentProviderFactory paymentFactory, CancellationToken ct) =>
-{
-    var provider = paymentFactory.GetDefaultProvider();
-    var result = await provider.CreatePaymentOrderAsync(request, ct);
-
-    return result.IsSuccess 
-        ? Results.Ok(result) 
-        : Results.BadRequest(new { error = result.ErrorMessage });
-})
-.WithName("CreatePaymentOrder");
-
-// ==========================================
-// 4. Merchant Dashboard & Financial Ledger
-// ==========================================
-app.MapGet("/api/merchants/{merchantId:guid}/dashboard", async (Guid merchantId, IOrderService orderService, CancellationToken ct) =>
-{
-    var dashboard = await orderService.GetMerchantDashboardAsync(merchantId, ct);
-    return dashboard is not null ? Results.Ok(dashboard) : Results.NotFound(new { error = "Merchant not found." });
-})
-.WithName("GetMerchantDashboard");
-
-app.MapGet("/api/merchants/{merchantId:guid}/orders", async (Guid merchantId, IOrderService orderService, CancellationToken ct) =>
-{
-    var orders = await orderService.GetMerchantOrdersAsync(merchantId, ct);
-    return Results.Ok(orders);
-})
-.WithName("GetMerchantOrders");
-
-app.MapGet("/api/merchants/{merchantId:guid}/ledger", async (Guid merchantId, IOrderService orderService, CancellationToken ct) =>
-{
-    var ledger = await orderService.GetMerchantLedgerAsync(merchantId, ct);
-    return Results.Ok(ledger);
-})
-.WithName("GetMerchantLedger");
-
-// ==========================================
-// 5. Verified Review & Rating Engine
-// ==========================================
-app.MapGet("/api/products/{id:guid}/reviews", async (Guid id, IReviewService reviewService, CancellationToken ct) =>
-{
-    var reviews = await reviewService.GetProductReviewsAsync(id, ct);
-    return Results.Ok(reviews);
-})
-.WithName("GetProductReviews");
-
-app.MapPost("/api/products/{id:guid}/reviews", async (Guid id, CreateReviewRequest request, IReviewService reviewService, CancellationToken ct) =>
-{
-    try
-    {
-        var review = await reviewService.AddReviewAsync(id, request, ct);
-        return Results.Created($"/api/reviews/{review.Id}", review);
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.WithName("AddProductReview");
+// Map RESTful Controllers
+app.MapControllers();
 
 app.Run();

@@ -76,5 +76,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
+  },
+  {
+    "approval_id": "APR-0008",
+    "timestamp": "2026-10-20T17:54:41+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "COMMIT_AUTHORIZATION",
+    "target_id": "RESTFUL-CONTROLLERS-MIGRATION",
+    "scope_description": "Explicit owner authorization to commit the migration of backend APIs from Minimal APIs to RESTful Controllers with custom ApiResponse envelope, global exception/model validation filters, centralized error handling, and 30 passing xUnit tests.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
   }
 ]
