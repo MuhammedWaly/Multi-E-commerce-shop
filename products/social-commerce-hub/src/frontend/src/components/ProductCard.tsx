@@ -20,16 +20,35 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
     : 0;
 
+  const isVideo = product.isVideo || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(product.mediaUrl);
+
   return (
     <article className="group bg-slate-900/90 rounded-3xl overflow-hidden border border-slate-800 hover:border-indigo-500/50 shadow-xl hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 flex flex-col justify-between">
-      {/* Product Image Canvas */}
+      {/* Product Image / Video Canvas */}
       <div className="relative aspect-[4/5] bg-slate-950 overflow-hidden">
-        <img
-          src={product.mediaUrl}
-          alt={product.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
+        {isVideo ? (
+          <div className="w-full h-full relative">
+            <video
+              src={product.mediaUrl}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+            <span className="absolute top-3 right-16 bg-purple-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+              <span>▶</span>
+              <span>Video</span>
+            </span>
+          </div>
+        ) : (
+          <img
+            src={product.mediaUrl}
+            alt={product.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+          />
+        )}
 
         {/* Floating Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">

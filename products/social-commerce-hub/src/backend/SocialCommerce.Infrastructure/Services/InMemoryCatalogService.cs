@@ -119,4 +119,53 @@ public class InMemoryCatalogService : ICatalogService
             product.CreatedAtUtc
         ));
     }
+
+    public Task<ProductDto> UpdateProductAsync(Guid merchantId, Guid productId, UpdateProductRequest request, CancellationToken ct = default)
+    {
+        var product = _products.FirstOrDefault(p => p.Id == productId);
+        if (product == null)
+            throw new KeyNotFoundException($"Product '{productId}' not found.");
+
+        if (product.MerchantId != merchantId)
+            throw new UnauthorizedAccessException("Forbidden.");
+
+        product.UpdateDetails(request.Title, request.Price, request.MediaUrl, request.IsVideo, request.StockQuantity);
+
+        return Task.FromResult(new ProductDto(
+            product.Id,
+            product.MerchantId,
+            product.Title,
+            product.Price,
+            product.MediaUrl,
+            product.IsVideo,
+            product.StockQuantity,
+            product.CreatedAtUtc
+        ));
+    }
+
+    public Task<bool> DeleteProductAsync(Guid merchantId, Guid productId, CancellationToken ct = default)
+    {
+        var product = _products.FirstOrDefault(p => p.Id == productId && p.MerchantId == merchantId);
+        if (product == null) return Task.FromResult(false);
+        _products.Remove(product);
+        return Task.FromResult(true);
+    }
+
+    public Task<SearchResponseDto> SearchAsync(string query, CancellationToken ct = default)
+    {
+        var raw = (query ?? string.Empty).Trim().ToLowerInvariant();
+        var matchedProducts = _products
+            .Where(p => p.Title.ToLowerInvariant().Contains(raw))
+            .Select(p => new SearchResultItemDto(
+                p.Id, "Product", p.Title, "Boutique Item", "/feed", p.Price, p.MediaUrl, p.IsVideo, 100))
+            .ToList();
+
+        var matchedMerchants = _merchants
+            .Where(m => m.StoreName.ToLowerInvariant().Contains(raw) || m.Slug.ToLowerInvariant().Contains(raw))
+            .Select(m => new SearchResultItemDto(
+                m.Id, "Merchant", m.StoreName, $"/{m.Slug}", $"/merchants/{m.Slug}", null, "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200", false, 100))
+            .ToList();
+
+        return Task.FromResult(new SearchResponseDto(raw, false, null, matchedProducts, matchedMerchants));
+    }
 }

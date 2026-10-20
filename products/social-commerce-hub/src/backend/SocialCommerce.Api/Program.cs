@@ -23,13 +23,16 @@ builder.Services.AddDbContext<SocialCommerceDbContext>(options =>
 // Register Security & Password Hashing Services
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 
 // Register Core Domain & Catalog Services
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IMediaService, MediaService>();
 
 // Register Payment Engine
 builder.Services.AddSingleton<IPaymentProvider, PayPalPaymentProvider>();
@@ -105,6 +108,14 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddOpenApi();
 
+// Ensure static root and uploads directory exist prior to WebApplication initialization
+var wwwrootDir = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+var uploadsDir = Path.Combine(wwwrootDir, "uploads");
+if (!Directory.Exists(uploadsDir))
+{
+    Directory.CreateDirectory(uploadsDir);
+}
+
 var app = builder.Build();
 
 // Initialize and seed database if necessary
@@ -120,6 +131,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.UseStaticFiles();
 
 // Authentication & Authorization Pipeline
 app.UseAuthentication();

@@ -12,7 +12,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   onAuthSuccess,
 }) => {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin');
   const [role, setRole] = useState<'Customer' | 'Merchant'>('Customer');
 
   // Form states
@@ -21,6 +21,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [fullName, setFullName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [storeSlug, setStoreSlug] = useState('');
+
+  // Password reset specific states
+  const [resetToken, setResetToken] = useState('');
+  const [newResetPassword, setNewResetPassword] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -63,7 +67,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           onAuthSuccess(res.user);
           onClose();
         }, 700);
-      } else {
+      } else if (mode === 'signup') {
         const res = await api.register({
           email,
           password,
@@ -89,6 +93,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) {
+      setErrorMsg('Please enter your email address.');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const res = await api.forgotPassword(email.trim());
+      setSuccessMsg(res.message || 'If the email exists, a password reset link has been dispatched.');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to dispatch password reset request.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !resetToken.trim() || !newResetPassword) {
+      setErrorMsg('Please fill in all reset fields.');
+      return;
+    }
+
+    if (newResetPassword.length < 6) {
+      setErrorMsg('New password must be at least 6 characters.');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      await api.resetPassword({
+        email: email.trim(),
+        resetToken: resetToken.trim(),
+        newPassword: newResetPassword,
+      });
+
+      setSuccessMsg('Password has been reset successfully! You can now sign in.');
+      setPassword(newResetPassword);
+      setTimeout(() => {
+        setMode('signin');
+        setResetToken('');
+        setNewResetPassword('');
+      }, 1200);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Invalid or expired password reset token.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative my-8">
@@ -104,249 +166,411 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Modal Header */}
         <div className="space-y-1.5 text-center">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-2xl mb-1 shadow-inner">
-            🔐
+            {mode === 'forgot' ? '🔑' : mode === 'reset' ? '🔄' : '🔐'}
           </div>
           <h2 className="text-2xl font-black text-white tracking-tight">
-            {mode === 'signin' ? 'Welcome Back' : 'Join SocialHub Egypt'}
+            {mode === 'signin'
+              ? 'Welcome Back'
+              : mode === 'signup'
+              ? 'Join SocialHub Egypt'
+              : mode === 'forgot'
+              ? 'Forgot Password?'
+              : 'Reset Your Password'}
           </h2>
           <p className="text-xs text-slate-400">
             {mode === 'signin'
               ? 'Access your saved discoveries, orders, and storefront portal'
-              : 'Discover artisanal fashion & leather or launch your boutique'}
+              : mode === 'signup'
+              ? 'Discover artisanal fashion & leather or launch your boutique'
+              : mode === 'forgot'
+              ? 'Enter your email to receive a password reset code or link'
+              : 'Enter your verification token and choose a new password'}
           </p>
         </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signin');
-              setErrorMsg(null);
-            }}
-            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer ${
-              mode === 'signin'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signup');
-              setErrorMsg(null);
-            }}
-            className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer ${
-              mode === 'signup'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Create Account
-          </button>
-        </div>
+        {/* Mode Switcher Tabs (Only in signin & signup modes) */}
+        {(mode === 'signin' || mode === 'signup') && (
+          <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signin');
+                setErrorMsg(null);
+                setSuccessMsg(null);
+              }}
+              className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer ${
+                mode === 'signin'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup');
+                setErrorMsg(null);
+                setSuccessMsg(null);
+              }}
+              className={`flex-1 py-2.5 rounded-xl transition-all cursor-pointer ${
+                mode === 'signup'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+        )}
 
         {/* Error & Success Alerts */}
         {errorMsg && (
-          <div className="p-3 bg-red-950/60 border border-red-500/40 rounded-2xl text-red-300 text-xs text-center font-medium">
+          <div className="p-3 bg-red-950/60 border border-red-500/40 rounded-2xl text-red-300 text-xs text-center font-medium animate-in fade-in">
             {errorMsg}
           </div>
         )}
         {successMsg && (
-          <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs text-center font-bold">
+          <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-2xl text-emerald-300 text-xs text-center font-bold animate-in fade-in">
             ✓ {successMsg}
           </div>
         )}
 
-        {/* Semantic Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Sign-up specific: Role Switcher */}
-          {mode === 'signup' && (
+        {/* FORGOT PASSWORD FORM */}
+        {mode === 'forgot' && (
+          <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300 block">I want to:</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole('Customer')}
-                  className={`p-3 rounded-2xl border text-xs text-left transition-all cursor-pointer ${
-                    role === 'Customer'
-                      ? 'border-indigo-500 bg-indigo-950/40 text-white shadow-sm'
-                      : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  <p className="font-bold">🛍️ Shop & Discover</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Explore curated local brands</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('Merchant')}
-                  className={`p-3 rounded-2xl border text-xs text-left transition-all cursor-pointer ${
-                    role === 'Merchant'
-                      ? 'border-indigo-500 bg-indigo-950/40 text-white shadow-sm'
-                      : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  <p className="font-bold">🏬 Sell & Manage</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Open independent store</p>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Full Name (Sign Up only) */}
-          {mode === 'signup' && (
-            <div className="space-y-1.5">
-              <label htmlFor="auth-fullname" className="text-xs font-semibold text-slate-300 block">
-                Full Name
+              <label htmlFor="auth-forgot-email" className="text-xs font-semibold text-slate-300 block">
+                Your Registered Email Address
               </label>
               <input
-                id="auth-fullname"
-                name="name"
-                type="text"
+                id="auth-forgot-email"
+                type="email"
                 required
-                autoComplete="name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Layla Nour"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
               />
             </div>
-          )}
 
-          {/* Merchant Store Fields (Sign Up as Merchant only) */}
-          {mode === 'signup' && role === 'Merchant' && (
-            <div className="p-3.5 bg-slate-950/80 rounded-2xl border border-indigo-500/30 space-y-3">
-              <div className="space-y-1">
-                <label htmlFor="auth-storename" className="text-xs font-semibold text-indigo-300 block">
-                  Storefront Name
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-xl shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                '✉️ Send Reset Token Link'
+              )}
+            </button>
+
+            <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('signin');
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ← Back to Sign In
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('reset');
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                className="text-indigo-400 hover:text-indigo-300 font-bold transition-colors cursor-pointer"
+              >
+                I have a reset token →
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* RESET PASSWORD FORM */}
+        {mode === 'reset' && (
+          <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="auth-reset-email" className="text-xs font-semibold text-slate-300 block">
+                Email Address
+              </label>
+              <input
+                id="auth-reset-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="auth-reset-token" className="text-xs font-semibold text-slate-300 block">
+                Reset Token
+              </label>
+              <input
+                id="auth-reset-token"
+                type="text"
+                required
+                value={resetToken}
+                onChange={(e) => setResetToken(e.target.value)}
+                placeholder="Paste token from email"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="auth-reset-newpass" className="text-xs font-semibold text-slate-300 block">
+                New Password (Minimum 6 characters)
+              </label>
+              <input
+                id="auth-reset-newpass"
+                type="password"
+                required
+                minLength={6}
+                value={newResetPassword}
+                onChange={(e) => setNewResetPassword(e.target.value)}
+                placeholder="Choose a strong new password"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-xl shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                '🔒 Set New Password'
+              )}
+            </button>
+
+            <div className="text-center pt-2 border-t border-slate-800/80 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('signin');
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ← Back to Sign In
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* SIGN IN / SIGN UP FORMS */}
+        {(mode === 'signin' || mode === 'signup') && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {/* Sign-up specific: Role Switcher */}
+            {mode === 'signup' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 block">I want to:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRole('Customer')}
+                    className={`p-3 rounded-2xl border text-xs text-left transition-all cursor-pointer ${
+                      role === 'Customer'
+                        ? 'border-indigo-500 bg-indigo-950/40 text-white shadow-sm'
+                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <p className="font-bold">🛍️ Shop & Discover</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Explore curated local brands</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole('Merchant')}
+                    className={`p-3 rounded-2xl border text-xs text-left transition-all cursor-pointer ${
+                      role === 'Merchant'
+                        ? 'border-indigo-500 bg-indigo-950/40 text-white shadow-sm'
+                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700'
+                    }`}
+                  >
+                    <p className="font-bold">🏬 Sell & Manage</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Open independent store</p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Full Name (Sign Up only) */}
+            {mode === 'signup' && (
+              <div className="space-y-1.5">
+                <label htmlFor="auth-fullname" className="text-xs font-semibold text-slate-300 block">
+                  Full Name
                 </label>
                 <input
-                  id="auth-storename"
+                  id="auth-fullname"
+                  name="name"
                   type="text"
                   required
-                  value={storeName}
-                  onChange={(e) => handleStoreNameChange(e.target.value)}
-                  placeholder="e.g. Lotus Studio"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  autoComplete="name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Layla Nour"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
                 />
               </div>
-              <div className="text-[11px] text-slate-400 font-mono">
-                Store URL: <span className="text-indigo-400">socialhub.eg/store/{storeSlug || 'your-store'}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Email Address */}
-          <div className="space-y-1.5">
-            <label htmlFor="auth-email" className="text-xs font-semibold text-slate-300 block">
-              Email Address
-            </label>
-            <input
-              id="auth-email"
-              name="email"
-              type="email"
-              required
-              autoComplete="username"
-              spellCheck="false"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
-            />
-          </div>
-
-          {/* Password */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between items-center">
-              <label
-                htmlFor={mode === 'signin' ? 'current-password' : 'new-password'}
-                className="text-xs font-semibold text-slate-300 block"
-              >
-                Password
-              </label>
-              {mode === 'signin' && (
-                <span className="text-[11px] text-indigo-400 hover:text-indigo-300 cursor-pointer">
-                  Forgot?
-                </span>
-              )}
-            </div>
-            <input
-              id={mode === 'signin' ? 'current-password' : 'new-password'}
-              name="password"
-              type="password"
-              required
-              minLength={6}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-xl shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            {isLoading ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : mode === 'signin' ? (
-              'Sign In to Account →'
-            ) : (
-              'Create My Account →'
             )}
-          </button>
-        </form>
 
-        {/* Demo Fast Login Preset Shortcuts */}
-        <div className="pt-2 border-t border-slate-800/80 space-y-2">
-          <p className="text-[10px] uppercase font-bold text-slate-500 text-center tracking-wider">
-            Quick One-Click Demo Logins
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* Merchant Store Fields (Sign Up as Merchant only) */}
+            {mode === 'signup' && role === 'Merchant' && (
+              <div className="p-3.5 bg-slate-950/80 rounded-2xl border border-indigo-500/30 space-y-3">
+                <div className="space-y-1">
+                  <label htmlFor="auth-storename" className="text-xs font-semibold text-indigo-300 block">
+                    Storefront Name
+                  </label>
+                  <input
+                    id="auth-storename"
+                    type="text"
+                    required
+                    value={storeName}
+                    onChange={(e) => handleStoreNameChange(e.target.value)}
+                    placeholder="e.g. Lotus Studio"
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div className="text-[11px] text-slate-400 font-mono">
+                  Store URL: <span className="text-indigo-400">socialhub.eg/store/{storeSlug || 'your-store'}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Email Address */}
+            <div className="space-y-1.5">
+              <label htmlFor="auth-email" className="text-xs font-semibold text-slate-300 block">
+                Email Address
+              </label>
+              <input
+                id="auth-email"
+                name="email"
+                type="email"
+                required
+                autoComplete="username"
+                spellCheck="false"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <label
+                  htmlFor={mode === 'signin' ? 'current-password' : 'new-password'}
+                  className="text-xs font-semibold text-slate-300 block"
+                >
+                  Password
+                </label>
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMode('forgot');
+                      setErrorMsg(null);
+                      setSuccessMsg(null);
+                    }}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 font-bold transition-colors cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
+              </div>
+              <input
+                id={mode === 'signin' ? 'current-password' : 'new-password'}
+                name="password"
+                type="password"
+                required
+                minLength={6}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            {/* Submit Button */}
             <button
-              type="button"
+              type="submit"
               disabled={isLoading}
-              onClick={() => handleQuickDemoLogin('customer@example.com')}
-              className="p-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-center text-[10px] text-slate-300 transition-colors cursor-pointer"
+              className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-xl shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <div className="font-bold text-white">👤 Shopper</div>
-              <div className="text-slate-500 truncate">Buyer User</div>
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : mode === 'signin' ? (
+                'Sign In to Account →'
+              ) : (
+                'Create My Account →'
+              )}
             </button>
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleQuickDemoLogin('sari@example.com')}
-              className="p-2 bg-slate-950 hover:bg-slate-800 border border-indigo-500/30 rounded-xl text-center text-[10px] text-indigo-300 transition-colors cursor-pointer"
-            >
-              <div className="font-bold text-indigo-300">🏬 Sari Store</div>
-              <div className="text-slate-500 truncate">Merchant</div>
-            </button>
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleQuickDemoLogin('craft@example.com')}
-              className="p-2 bg-slate-950 hover:bg-slate-800 border border-purple-500/30 rounded-xl text-center text-[10px] text-purple-300 transition-colors cursor-pointer"
-            >
-              <div className="font-bold text-purple-300">👜 Cairo Craft</div>
-              <div className="text-slate-500 truncate">Merchant</div>
-            </button>
-            <button
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleQuickDemoLogin('admin@socialhub.eg')}
-              className="p-2 bg-slate-950 hover:bg-slate-800 border border-rose-500/30 rounded-xl text-center text-[10px] text-rose-300 transition-colors cursor-pointer"
-            >
-              <div className="font-bold text-rose-300">🛡️ Admin</div>
-              <div className="text-slate-500 truncate">Platform Lead</div>
-            </button>
+          </form>
+        )}
+
+        {/* Demo Fast Login Preset Shortcuts (Only in signin mode) */}
+        {mode === 'signin' && (
+          <div className="pt-2 border-t border-slate-800/80 space-y-2">
+            <p className="text-[10px] uppercase font-bold text-slate-500 text-center tracking-wider">
+              Quick One-Click Demo Logins
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleQuickDemoLogin('customer@example.com')}
+                className="p-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-center text-[10px] text-slate-300 transition-colors cursor-pointer"
+              >
+                <div className="font-bold text-white">👤 Shopper</div>
+                <div className="text-slate-500 truncate">Buyer User</div>
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleQuickDemoLogin('sari@example.com')}
+                className="p-2 bg-slate-950 hover:bg-slate-800 border border-indigo-500/30 rounded-xl text-center text-[10px] text-indigo-300 transition-colors cursor-pointer"
+              >
+                <div className="font-bold text-indigo-300">🏬 Sari Store</div>
+                <div className="text-slate-500 truncate">Merchant</div>
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleQuickDemoLogin('craft@example.com')}
+                className="p-2 bg-slate-950 hover:bg-slate-800 border border-purple-500/30 rounded-xl text-center text-[10px] text-purple-300 transition-colors cursor-pointer"
+              >
+                <div className="font-bold text-purple-300">👜 Cairo Craft</div>
+                <div className="text-slate-500 truncate">Merchant</div>
+              </button>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={() => handleQuickDemoLogin('admin@socialhub.eg')}
+                className="p-2 bg-slate-950 hover:bg-slate-800 border border-rose-500/30 rounded-xl text-center text-[10px] text-rose-300 transition-colors cursor-pointer"
+              >
+                <div className="font-bold text-rose-300">🛡️ Admin</div>
+                <div className="text-slate-500 truncate">Platform Lead</div>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
     </div>

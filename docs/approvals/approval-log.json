@@ -109,5 +109,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
+  },
+  {
+    "approval_id": "APR-0011",
+    "timestamp": "2026-10-21T02:39:20+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "COMMIT_AUTHORIZATION",
+    "target_id": "SEARCH-CATALOG-ACCOUNT-SECURITY-AND-MEDIA",
+    "scope_description": "Explicit owner authorization to commit: 1) Merchant Product CRUD (edit/delete) with tenant isolation, 2) Debounced smart search & fuzzy nearest-match, 3) Dedicated Search & Explore page with multi-filters and pagination, 4) Media uploads engine (images/videos), 5) User Account settings, change password, forgot/reset password, and email confirmation lifecycle across full stack with 52 passing xUnit tests.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
   }
 ]

@@ -11,15 +11,18 @@ public class AuthService : IAuthService
     private readonly SocialCommerceDbContext _db;
     private readonly IPasswordHasher _hasher;
     private readonly IJwtTokenService _jwt;
+    private readonly IEmailService? _emailService;
 
     public AuthService(
         SocialCommerceDbContext db,
         IPasswordHasher hasher,
-        IJwtTokenService jwt)
+        IJwtTokenService jwt,
+        IEmailService? emailService = null)
     {
         _db = db;
         _hasher = hasher;
         _jwt = jwt;
+        _emailService = emailService;
     }
 
     public async Task<AuthResponseDto> RegisterAsync(RegisterRequest request, CancellationToken ct = default)
@@ -74,8 +77,16 @@ public class AuthService : IAuthService
         var hash = _hasher.HashPassword(request.Password, out var salt);
         var user = new User(normalizedEmail, hash, salt, request.FullName, role, merchantId);
 
+        var confirmToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+        user.SetEmailConfirmationToken(confirmToken, DateTime.UtcNow.AddDays(1));
+
         _db.Users.Add(user);
         await _db.SaveChangesAsync(ct);
+
+        if (_emailService != null)
+        {
+            await _emailService.SendEmailConfirmationAsync(user.Email, user.FullName, confirmToken, ct);
+        }
 
         var token = _jwt.GenerateToken(user, storeSlug);
 
@@ -85,7 +96,8 @@ public class AuthService : IAuthService
             user.FullName,
             user.Role.ToString(),
             user.MerchantId,
-            storeSlug
+            storeSlug,
+            user.IsEmailConfirmed
         );
 
         return new AuthResponseDto(token, userDto);
@@ -122,7 +134,8 @@ public class AuthService : IAuthService
             user.FullName,
             user.Role.ToString(),
             user.MerchantId,
-            storeSlug
+            storeSlug,
+            user.IsEmailConfirmed
         );
 
         return new AuthResponseDto(token, userDto);
@@ -146,7 +159,8 @@ public class AuthService : IAuthService
             user.FullName,
             user.Role.ToString(),
             user.MerchantId,
-            storeSlug
+            storeSlug,
+            user.IsEmailConfirmed
         );
     }
 }

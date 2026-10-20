@@ -20,7 +20,8 @@ public record UserDto(
     string FullName,
     string Role,
     Guid? MerchantId,
-    string? StoreSlug
+    string? StoreSlug,
+    bool IsEmailConfirmed = false
 );
 
 public record AuthResponseDto(

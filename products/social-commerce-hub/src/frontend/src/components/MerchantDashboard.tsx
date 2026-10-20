@@ -6,6 +6,8 @@ interface MerchantDashboardProps {
   merchants: Merchant[];
   products: Product[];
   onAddProduct: (newProduct: Product) => void;
+  onUpdateProduct?: (updatedProduct: Product) => void;
+  onDeleteProduct?: (productId: string) => void;
   onViewPublicStore: (merchant: Merchant) => void;
   currentUser?: UserDto | null;
   onOpenAuthModal?: () => void;
@@ -15,6 +17,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   merchants,
   products,
   onAddProduct,
+  onUpdateProduct,
+  onDeleteProduct,
   onViewPublicStore,
   currentUser,
   onOpenAuthModal
@@ -62,9 +66,74 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   const [newTitle, setNewTitle] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newMediaUrl, setNewMediaUrl] = useState('');
+  const [newIsVideo, setNewIsVideo] = useState(false);
+  const [mediaMode, setMediaMode] = useState<'upload' | 'url'>('upload');
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const [newCategory, setNewCategory] = useState<'fashion' | 'leather' | 'accessories' | 'home'>('fashion');
   const [newStock, setNewStock] = useState('10');
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  const handleStartEdit = (prod: Product) => {
+    setEditingProductId(prod.id);
+    setNewTitle(prod.title);
+    setNewPrice(prod.price.toString());
+    setNewStock(prod.stockQuantity.toString());
+    setNewCategory(prod.category || 'fashion');
+    setNewMediaUrl(prod.mediaUrl);
+    setNewIsVideo(prod.isVideo ?? false);
+    setMediaMode(prod.mediaUrl.startsWith('/uploads') ? 'upload' : 'url');
+    const formEl = document.getElementById('product-form-card');
+    formEl?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProductId(null);
+    setNewTitle('');
+    setNewPrice('');
+    setNewStock('10');
+    setNewCategory('fashion');
+    setNewMediaUrl('');
+    setNewIsVideo(false);
+  };
+
+  const handleDeleteProduct = async (productId: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete product "${title}" from your store?`)) {
+      return;
+    }
+    try {
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
+      if (isGuid) {
+        await api.deleteProduct(currentMerchant.id, productId);
+      }
+      if (onDeleteProduct) {
+        onDeleteProduct(productId);
+      }
+      if (editingProductId === productId) {
+        handleCancelEdit();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete product.');
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const result = await api.uploadMedia(file);
+      setNewMediaUrl(result.url);
+      setNewIsVideo(result.isVideo);
+    } catch (err: any) {
+      setUploadError(err.message || 'Failed to upload media file.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const [metrics, setMetrics] = useState({
     availableBalance: 14250,
@@ -187,6 +256,53 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
     const priceNum = parseFloat(newPrice);
     const stockNum = parseInt(newStock, 10);
 
+    if (editingProductId) {
+      // Edit existing product
+      const updatedProduct: Product = {
+        id: editingProductId,
+        merchantId: currentMerchant.id,
+        storeName: currentMerchant.name,
+        storeSlug: currentMerchant.slug,
+        title: newTitle,
+        price: priceNum,
+        mediaUrl: newMediaUrl || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800',
+        isVideo: newIsVideo || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(newMediaUrl),
+        category: newCategory,
+        rating: 5.0,
+        reviewCount: 0,
+        stockQuantity: stockNum,
+        isFeatured: false
+      };
+
+      try {
+        const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(editingProductId);
+        if (isGuid) {
+          await api.updateProduct(currentMerchant.id, editingProductId, {
+            title: newTitle,
+            price: priceNum,
+            mediaUrl: updatedProduct.mediaUrl,
+            isVideo: updatedProduct.isVideo ?? false,
+            stockQuantity: stockNum
+          });
+        }
+      } catch (err) {
+        console.warn('Backend product update fallback:', err);
+      }
+
+      if (onUpdateProduct) {
+        onUpdateProduct(updatedProduct);
+      }
+      setPublishSuccess(true);
+      setEditingProductId(null);
+      setNewTitle('');
+      setNewPrice('');
+      setNewMediaUrl('');
+      setNewIsVideo(false);
+      setTimeout(() => setPublishSuccess(false), 2000);
+      return;
+    }
+
+    // New product creation
     const product: Product = {
       id: 'p-' + Date.now(),
       merchantId: currentMerchant.id,
@@ -195,6 +311,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       title: newTitle,
       price: priceNum,
       mediaUrl: newMediaUrl || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=800',
+      isVideo: newIsVideo || /\.(mp4|webm|mov|mkv)(\?.*)?$/i.test(newMediaUrl),
       category: newCategory,
       rating: 5.0,
       reviewCount: 0,
@@ -209,7 +326,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
           title: newTitle,
           price: priceNum,
           mediaUrl: product.mediaUrl,
-          isVideo: false,
+          isVideo: product.isVideo ?? false,
           stockQuantity: stockNum
         });
         product.id = published.id;
@@ -223,6 +340,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
     setNewTitle('');
     setNewPrice('');
     setNewMediaUrl('');
+    setNewIsVideo(false);
     setTimeout(() => setPublishSuccess(false), 2000);
   };
 
@@ -439,16 +557,33 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       {activeTab === 'catalog' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {/* New Product Publishing Form */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-            <div className="border-b border-slate-800 pb-3">
-              <h3 className="font-extrabold text-base text-white">Publish New Product</h3>
-              <p className="text-xs text-slate-400">Will appear instantly on your store and marketplace</p>
+          {/* Product Publishing & Editing Form */}
+          <div id="product-form-card" className={`bg-slate-900 border rounded-3xl p-6 space-y-4 shadow-xl transition-all ${
+            editingProductId ? 'border-indigo-500/60 ring-2 ring-indigo-500/20' : 'border-slate-800'
+          }`}>
+            <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-white">
+                  {editingProductId ? '✏️ Edit Product Details' : 'Publish New Product'}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {editingProductId ? 'Update pricing, stock, photos or videos' : 'Will appear instantly on your store and marketplace'}
+                </p>
+              </div>
+              {editingProductId && (
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  ✕ Cancel
+                </button>
+              )}
             </div>
 
             {publishSuccess && (
               <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold text-center">
-                ✓ Product published successfully to your storefront!
+                ✓ Product {editingProductId ? 'updated' : 'published'} successfully!
               </div>
             )}
 
@@ -503,23 +638,157 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                 </select>
               </div>
 
-              <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Image URL</label>
-                <input
-                  type="url"
-                  value={newMediaUrl}
-                  onChange={(e) => setNewMediaUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
-                />
+              {/* Media Asset Section (Image or Video) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-300 block">
+                    Product Media (Photos & Videos)
+                  </label>
+                  <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setMediaMode('upload')}
+                      className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                        mediaMode === 'upload' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      📁 Upload
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMediaMode('url')}
+                      className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                        mediaMode === 'url' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      🔗 Link URL
+                    </button>
+                  </div>
+                </div>
+
+                {mediaMode === 'upload' ? (
+                  <div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file);
+                      }}
+                      className="hidden"
+                    />
+
+                    {newMediaUrl ? (
+                      <div className="relative rounded-2xl overflow-hidden border border-slate-800 bg-slate-950 p-2">
+                        {newIsVideo || /\.(mp4|webm|mov|mkv)/i.test(newMediaUrl) ? (
+                          <div className="relative">
+                            <video
+                              src={newMediaUrl}
+                              className="w-full h-36 object-cover rounded-xl"
+                              controls
+                              muted
+                              playsInline
+                            />
+                            <span className="absolute top-2 left-2 bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
+                              🎥 Video Reel Ready
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <img
+                              src={newMediaUrl}
+                              alt="Uploaded product preview"
+                              className="w-full h-36 object-cover rounded-xl"
+                            />
+                            <span className="absolute top-2 left-2 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
+                              📸 Image Asset Ready
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-2 px-1">
+                          <span className="text-[10px] font-mono text-slate-400 truncate max-w-[200px]">
+                            {newMediaUrl}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                          >
+                            Replace File
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all ${
+                          isUploading
+                            ? 'border-indigo-500 bg-indigo-950/20'
+                            : 'border-slate-800 hover:border-indigo-500/60 bg-slate-950/60 hover:bg-slate-950'
+                        }`}
+                      >
+                        {isUploading ? (
+                          <div className="flex flex-col items-center gap-2 py-2">
+                            <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-xs font-bold text-indigo-300">Uploading media to server...</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5 py-1">
+                            <span className="text-2xl">📸 🎥</span>
+                            <span className="text-xs font-bold text-white">Click to upload Image or Video</span>
+                            <p className="text-[10px] text-slate-400">
+                              Photos: JPG, PNG, WebP (up to 15MB) • Videos: MP4, WebM (up to 60MB)
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {uploadError && (
+                      <p className="text-rose-400 text-[11px] mt-1 font-semibold">{uploadError}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <input
+                      type="url"
+                      value={newMediaUrl}
+                      onChange={(e) => setNewMediaUrl(e.target.value)}
+                      placeholder="https://images.unsplash.com/... or https://.../video.mp4"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    />
+                    <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newIsVideo}
+                        onChange={(e) => setNewIsVideo(e.target.checked)}
+                        className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-0"
+                      />
+                      <span>This URL is an interactive product video (MP4/WebM)</span>
+                    </label>
+                  </div>
+                )}
               </div>
 
-              <button
-                type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold py-3 rounded-2xl text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
-              >
-                + Publish to Storefront
-              </button>
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold py-3 rounded-2xl text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                >
+                  {editingProductId ? '💾 Save Product Changes' : '+ Publish to Storefront'}
+                </button>
+                {editingProductId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-2xl text-xs transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -532,15 +801,51 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                   key={product.id}
                   className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-3 shadow-md"
                 >
-                  <img
-                    src={product.mediaUrl}
-                    alt={product.title}
-                    className="w-16 h-16 rounded-xl object-cover"
-                  />
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-950 shrink-0 relative">
+                    {product.isVideo || /\.(mp4|webm|mov|mkv)/i.test(product.mediaUrl) ? (
+                      <>
+                        <video
+                          src={product.mediaUrl}
+                          className="w-full h-full object-cover"
+                          muted
+                          loop
+                          autoPlay
+                          playsInline
+                        />
+                        <span className="absolute bottom-1 right-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded">
+                          ▶
+                        </span>
+                      </>
+                    ) : (
+                      <img
+                        src={product.mediaUrl}
+                        alt={product.title}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-xs text-white truncate">{product.title}</h4>
                     <p className="text-emerald-400 font-extrabold text-xs mt-0.5">{(product.price ?? 0).toLocaleString()} EGP</p>
                     <p className="text-[11px] text-slate-400">{product.stockQuantity} in stock • ★ {product.rating}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleStartEdit(product)}
+                      className="p-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      title="Edit Product"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteProduct(product.id, product.title)}
+                      className="p-1.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      title="Delete Product"
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
               ))}

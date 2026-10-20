@@ -31,6 +31,10 @@ public class SocialCommerceDbContext : DbContext
             b.Property(u => u.FullName).IsRequired().HasMaxLength(150);
             b.Property(u => u.PasswordHash).IsRequired().HasMaxLength(500);
             b.Property(u => u.Salt).IsRequired().HasMaxLength(100);
+            b.Property(u => u.PhoneNumber).HasMaxLength(30);
+            b.Property(u => u.AvatarUrl).HasMaxLength(1000);
+            b.Property(u => u.EmailConfirmationToken).HasMaxLength(100);
+            b.Property(u => u.PasswordResetToken).HasMaxLength(100);
             b.HasIndex(u => u.MerchantId);
         });
 

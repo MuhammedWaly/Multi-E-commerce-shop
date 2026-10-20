@@ -3,9 +3,10 @@ import React from 'react';
 interface HeroBannerProps {
   onExploreClick: () => void;
   onStoresClick: () => void;
+  onSeeAllClick?: () => void;
 }
 
-export const HeroBanner: React.FC<HeroBannerProps> = ({ onExploreClick, onStoresClick }) => {
+export const HeroBanner: React.FC<HeroBannerProps> = ({ onExploreClick, onStoresClick, onSeeAllClick }) => {
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 border border-slate-800 shadow-2xl my-6">
       {/* Background Glows */}
@@ -31,19 +32,28 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ onExploreClick, onStores
             Explore authentic linen fashion, heritage hand-stitched leather, and Tunis Village pottery. Every purchase directly empowers local Egyptian makers with seamless PayPal checkout.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-2">
             <button
               onClick={onExploreClick}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-6 py-3.5 rounded-2xl text-sm shadow-xl shadow-indigo-600/30 transition-all flex items-center gap-2 cursor-pointer"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-5 py-3 rounded-2xl text-sm shadow-xl shadow-indigo-600/30 transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>🛍️ Explore Marketplace</span>
               <span>↓</span>
             </button>
+            {onSeeAllClick && (
+              <button
+                onClick={onSeeAllClick}
+                className="bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-500/40 font-bold px-5 py-3 rounded-2xl text-sm shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>🔍 See All Products</span>
+                <span>↗</span>
+              </button>
+            )}
             <button
               onClick={onStoresClick}
-              className="bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold px-6 py-3.5 rounded-2xl text-sm transition-colors cursor-pointer"
+              className="bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold px-5 py-3 rounded-2xl text-sm transition-colors cursor-pointer"
             >
-              🏬 Browse Top Stores
+              🏬 Top Stores
             </button>
           </div>
 

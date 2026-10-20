@@ -88,6 +88,68 @@ public class MerchantsController : BaseApiController
     }
 
     /// <summary>
+    /// Updates an existing product under the merchant storefront (Merchant Store Owner Only)
+    /// </summary>
+    [Authorize(Roles = "Merchant")]
+    [HttpPut("{merchantId:guid}/products/{productId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<ProductDto>>> UpdateProduct(
+        Guid merchantId,
+        Guid productId,
+        [FromBody] UpdateProductRequest request,
+        CancellationToken ct = default)
+    {
+        if (!IsAuthorizedForMerchant(merchantId))
+        {
+            return Failed<ProductDto>("Access denied. Only the store owner can edit products for this storefront.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
+        try
+        {
+            var updated = await _catalogService.UpdateProductAsync(merchantId, productId, request, ct);
+            return Success(updated, "Product updated successfully.");
+        }
+        catch (KeyNotFoundException)
+        {
+            return Failed<ProductDto>($"Product '{productId}' was not found.", "Product not found.", StatusCodes.Status404NotFound);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Failed<ProductDto>("Access denied. You cannot edit products belonging to another store.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+    }
+
+    /// <summary>
+    /// Deletes a product from the merchant storefront (Merchant Store Owner Only)
+    /// </summary>
+    [Authorize(Roles = "Merchant")]
+    [HttpDelete("{merchantId:guid}/products/{productId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<bool>>> DeleteProduct(
+        Guid merchantId,
+        Guid productId,
+        CancellationToken ct = default)
+    {
+        if (!IsAuthorizedForMerchant(merchantId))
+        {
+            return Failed<bool>("Access denied. Only the store owner can delete products from this storefront.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
+        var success = await _catalogService.DeleteProductAsync(merchantId, productId, ct);
+        if (!success)
+        {
+            return Failed<bool>($"Product '{productId}' was not found for this merchant.", "Product not found.", StatusCodes.Status404NotFound);
+        }
+
+        return Success(true, "Product removed successfully from storefront.");
+    }
+
+    /// <summary>
     /// Retrieves all customer orders placed for this merchant (Merchant Store Owner Only)
     /// </summary>
     [Authorize(Roles = "Merchant")]

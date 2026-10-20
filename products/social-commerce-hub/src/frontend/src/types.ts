@@ -7,6 +7,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   mediaUrl: string;
+  isVideo?: boolean;
   category: 'fashion' | 'leather' | 'accessories' | 'home';
   rating: number;
   reviewCount: number;

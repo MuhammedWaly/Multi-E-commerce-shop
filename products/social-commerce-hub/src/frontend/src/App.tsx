@@ -12,6 +12,8 @@ import { ReviewsModal } from './components/ReviewsModal';
 import { CartSlideOver } from './components/CartSlideOver';
 import { CreateMerchantModal } from './components/CreateMerchantModal';
 import { AuthModal } from './components/AuthModal';
+import { AccountSettingsModal } from './components/AccountSettingsModal';
+import { SearchExplorePage } from './components/SearchExplorePage';
 import { Footer } from './components/Footer';
 import { mockMerchants, mockProducts } from './data/mockData';
 import { api, getStoredUser, type UserDto } from './services/api';
@@ -29,12 +31,15 @@ export const App: React.FC = () => {
   // Navigation / Views / RBAC Portals
   const [activePortal, setActivePortal] = useState<PortalType>('buyer');
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
+  const [isSearchExploreActive, setIsSearchExploreActive] = useState<boolean>(false);
+  const [searchPageQuery, setSearchPageQuery] = useState<string>('');
 
   // Cart, Modals & Auth State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isMerchantModalOpen, setIsMerchantModalOpen] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState<boolean>(false);
   const [isBuyerOrdersOpen, setIsBuyerOrdersOpen] = useState<boolean>(false);
   const [reviewProduct, setReviewProduct] = useState<Product | null>(null);
   const [currentUser, setCurrentUser] = useState<UserDto | null>(() => getStoredUser());
@@ -157,9 +162,35 @@ export const App: React.FC = () => {
     const merchant = merchants.find((m) => m.slug === slug);
     if (merchant) {
       setSelectedMerchant(merchant);
+      setIsSearchExploreActive(false);
       setActivePortal('buyer');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const handleExecuteSearch = (q: string) => {
+    setSearchPageQuery(q);
+    setIsSearchExploreActive(true);
+    setSelectedMerchant(null);
+    setActivePortal('buyer');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenSeeAll = () => {
+    setSearchPageQuery('');
+    setIsSearchExploreActive(true);
+    setSelectedMerchant(null);
+    setActivePortal('buyer');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavigateHome = () => {
+    setIsSearchExploreActive(false);
+    setSelectedMerchant(null);
+    setActivePortal('buyer');
+    setSearchQuery('');
+    setSearchPageQuery('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleResetFilters = () => {
@@ -179,25 +210,27 @@ export const App: React.FC = () => {
         activeCategory={activeCategory}
         onSelectCategory={(cat) => {
           setSelectedMerchant(null);
+          setIsSearchExploreActive(false);
           setActivePortal('buyer');
           setActiveCategory(cat);
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onNavigateHome={() => {
-          setSelectedMerchant(null);
-          setActivePortal('buyer');
-        }}
+        onExecuteSearch={handleExecuteSearch}
+        onNavigateHome={handleNavigateHome}
         onOpenMerchantModal={() => setIsMerchantModalOpen(true)}
         activePortal={activePortal}
         onSelectPortal={(portal) => {
           setActivePortal(portal);
           setSelectedMerchant(null);
+          setIsSearchExploreActive(false);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         currentUser={currentUser}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenBuyerOrders={() => setIsBuyerOrdersOpen(true)}
+        onOpenAccountSettings={() => setIsAccountSettingsOpen(true)}
+        onSelectStore={(slug) => handleStoreClick(slug)}
         onLogout={handleLogout}
       />
 
@@ -227,6 +260,12 @@ export const App: React.FC = () => {
             onAddProduct={(newProduct) => {
               setProducts((prev) => [newProduct, ...prev]);
             }}
+            onUpdateProduct={(updatedProduct) => {
+              setProducts((prev) => prev.map((p) => p.id === updatedProduct.id ? updatedProduct : p));
+            }}
+            onDeleteProduct={(productId) => {
+              setProducts((prev) => prev.filter((p) => p.id !== productId));
+            }}
             onViewPublicStore={(merchant) => {
               setActivePortal('buyer');
               setSelectedMerchant(merchant);
@@ -243,6 +282,18 @@ export const App: React.FC = () => {
             onAddToCart={handleAddToCart}
             onOpenReviews={(prod) => setReviewProduct(prod)}
           />
+        ) : isSearchExploreActive ? (
+          /* Dedicated Search & Explore Catalog Page with Multi-Filters & Pagination */
+          <SearchExplorePage
+            initialQuery={searchPageQuery}
+            allProducts={products}
+            merchants={merchants}
+            onQuickBuy={handleQuickBuy}
+            onAddToCart={handleAddToCart}
+            onStoreClick={(slug) => handleStoreClick(slug)}
+            onOpenReviews={(prod) => setReviewProduct(prod)}
+            onBackToHome={handleNavigateHome}
+          />
         ) : (
           /* Multi-Merchant Marketplace Homepage View */
           <>
@@ -256,6 +307,7 @@ export const App: React.FC = () => {
                 const el = document.getElementById('featured-stores');
                 el?.scrollIntoView({ behavior: 'smooth' });
               }}
+              onSeeAllClick={handleOpenSeeAll}
             />
 
             {/* Featured Merchants Section */}
@@ -271,7 +323,7 @@ export const App: React.FC = () => {
 
             {/* Split Screen Desktop Catalog Area (Filters Sidebar + Expansive Product Grid) */}
             <div id="marketplace-catalog" className="pt-6">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
                 <div>
                   <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
                     Curated Catalog
@@ -280,9 +332,18 @@ export const App: React.FC = () => {
                     Explore All Discoveries
                   </h2>
                 </div>
-                <p className="text-xs text-slate-400">
-                  {filteredProducts.length} items from Egyptian boutiques & makers
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="text-xs text-slate-400">
+                    {filteredProducts.length} items from Egyptian boutiques & makers
+                  </p>
+                  <button
+                    onClick={handleOpenSeeAll}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
+                  >
+                    <span>See All & Paginate</span>
+                    <span>↗</span>
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -384,6 +445,16 @@ export const App: React.FC = () => {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={handleAuthSuccess}
+      />
+
+      {/* User Account Settings & Password Security Modal */}
+      <AccountSettingsModal
+        isOpen={isAccountSettingsOpen}
+        onClose={() => setIsAccountSettingsOpen(false)}
+        currentUser={currentUser}
+        onProfileUpdated={(updated) => {
+          setCurrentUser(updated);
+        }}
       />
 
       {/* Full Web Mega Footer */}

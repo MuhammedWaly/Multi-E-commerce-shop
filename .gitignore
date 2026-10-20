@@ -24,3 +24,7 @@ dist/
 *.db-shm
 *.db-wal
 
+# Static user uploaded media assets
+**/wwwroot/uploads/*
+!**/wwwroot/uploads/.gitkeep
+

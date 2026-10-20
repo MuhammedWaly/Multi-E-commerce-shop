@@ -13,6 +13,42 @@ export interface UserDto {
   role: 'Customer' | 'Merchant' | 'Admin';
   merchantId?: string;
   storeSlug?: string;
+  isEmailConfirmed?: boolean;
+}
+
+export interface UserProfileDto {
+  id: string;
+  email: string;
+  fullName: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
+  role: string;
+  merchantId?: string;
+  storeSlug?: string;
+  isEmailConfirmed: boolean;
+  createdAtUtc: string;
+}
+
+export interface UpdateProfileRequest {
+  fullName: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  resetToken: string;
+  newPassword: string;
+}
+
+export interface ConfirmEmailRequest {
+  email: string;
+  token: string;
 }
 
 export interface AuthResponseDto {
@@ -169,6 +205,34 @@ export interface AdminOrderDto {
   createdAtUtc: string;
 }
 
+export interface MediaUploadResponseDto {
+  url: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  isVideo: boolean;
+}
+
+export interface SearchResultItemDto {
+  id: string;
+  type: 'Product' | 'Merchant';
+  title: string;
+  subtitle: string;
+  slugOrUrl: string;
+  price?: number;
+  mediaUrl: string;
+  isVideo: boolean;
+  matchScore: number;
+}
+
+export interface SearchResponseDto {
+  query: string;
+  isFuzzyMatch: boolean;
+  suggestedQuery?: string | null;
+  products: SearchResultItemDto[];
+  merchants: SearchResultItemDto[];
+}
+
 export interface ReviewDto {
   id: string;
   productId: string;
@@ -316,6 +380,30 @@ export const api = {
     });
   },
 
+  async updateProduct(merchantId: string, productId: string, data: {
+    title: string;
+    price: number;
+    mediaUrl: string;
+    isVideo?: boolean;
+    stockQuantity: number;
+  }): Promise<ProductDto> {
+    return request<ProductDto>(`/merchants/${merchantId}/products/${productId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteProduct(merchantId: string, productId: string): Promise<boolean> {
+    return request<boolean>(`/merchants/${merchantId}/products/${productId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Smart Ranked & Fuzzy Search
+  async search(query: string): Promise<SearchResponseDto> {
+    return request<SearchResponseDto>(`/search?q=${encodeURIComponent(query)}`);
+  },
+
   async getMerchantOrders(merchantId: string): Promise<OrderDto[]> {
     return request<OrderDto[]>(`/merchants/${merchantId}/orders`);
   },
@@ -394,6 +482,28 @@ export const api = {
     });
   },
 
+  // Media Uploads (Images & Videos)
+  async uploadMedia(file: File): Promise<MediaUploadResponseDto> {
+    const token = getStoredToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/media/upload', {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    const payload: ApiResponse<MediaUploadResponseDto> = await response.json();
+    if (!response.ok || !payload.success) {
+      const errorDetails = payload.errors?.join(', ') || payload.message || 'Media upload failed';
+      throw new Error(errorDetails);
+    }
+    return payload.data;
+  },
+
   // Verified Reviews
   async getReviews(productId: string): Promise<ReviewDto[]> {
     return request<ReviewDto[]>(`/products/${productId}/reviews`);
@@ -409,6 +519,53 @@ export const api = {
     return request<ReviewDto>(`/products/${productId}/reviews`, {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  // User Account Settings & Password Security
+  async getProfile(): Promise<UserProfileDto> {
+    return request<UserProfileDto>('/account/profile');
+  },
+
+  async updateProfile(data: UpdateProfileRequest): Promise<UserProfileDto> {
+    return request<UserProfileDto>('/account/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async changePassword(data: ChangePasswordRequest): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>('/account/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/account/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(data: ResetPasswordRequest): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>('/account/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async confirmEmail(data: ConfirmEmailRequest): Promise<{ success: boolean }> {
+    return request<{ success: boolean }>('/account/confirm-email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async resendConfirmation(email: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/account/resend-confirmation', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
   },
 };

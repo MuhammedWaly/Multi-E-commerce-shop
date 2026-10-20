@@ -37,6 +37,34 @@ public record AddProductRequest(
     int StockQuantity
 );
 
+public record UpdateProductRequest(
+    string Title,
+    decimal Price,
+    string MediaUrl,
+    bool IsVideo,
+    int StockQuantity
+);
+
+public record SearchResultItemDto(
+    Guid Id,
+    string Type, // "Product" or "Merchant"
+    string Title,
+    string Subtitle,
+    string SlugOrUrl,
+    decimal? Price,
+    string MediaUrl,
+    bool IsVideo,
+    int MatchScore
+);
+
+public record SearchResponseDto(
+    string Query,
+    bool IsFuzzyMatch,
+    string? SuggestedQuery,
+    IReadOnlyList<SearchResultItemDto> Products,
+    IReadOnlyList<SearchResultItemDto> Merchants
+);
+
 public record ProductDto(
     Guid Id,
     Guid MerchantId,

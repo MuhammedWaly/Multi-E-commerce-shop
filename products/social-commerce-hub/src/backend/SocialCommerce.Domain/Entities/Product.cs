@@ -45,6 +45,27 @@ public class Product
         CreatedAtUtc = DateTime.UtcNow;
     }
 
+    public void UpdateDetails(string title, decimal price, string mediaUrl, bool isVideo, int stockQuantity)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("Product title cannot be empty.", nameof(title));
+
+        if (price < 0)
+            throw new ArgumentException("Product price cannot be negative.", nameof(price));
+
+        if (string.IsNullOrWhiteSpace(mediaUrl))
+            throw new ArgumentException("Media URL cannot be empty.", nameof(mediaUrl));
+
+        if (stockQuantity < 0)
+            throw new ArgumentException("Stock quantity cannot be negative.", nameof(stockQuantity));
+
+        Title = title.Trim();
+        Price = price;
+        MediaUrl = mediaUrl.Trim();
+        IsVideo = isVideo;
+        StockQuantity = stockQuantity;
+    }
+
     public void UpdatePrice(decimal newPrice)
     {
         if (newPrice < 0)
