@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>مهمة عمل هندسية: TASK-0003-A - متطلبات الـ Domain الحقيقية</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+        body {
+            font-family: 'Cairo', sans-serif;
+            margin: 40px;
+            color: #1e293b;
+            background-color: #ffffff;
+            line-height: 1.6;
+        }
+        .header {
+            border-bottom: 3px solid #dc2626;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            color: #991b1b;
+            margin: 0;
+            font-size: 24px;
+        }
+        .badge {
+            background-color: #fee2e2;
+            color: #991b1b;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #1e3a8a;
+            font-size: 18px;
+            margin-top: 0;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 8px;
+        }
+        .challenge-box {
+            background-color: #fef2f2;
+            border-right: 4px solid #ef4444;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .rule-box {
+            background-color: #f0fdf4;
+            border-right: 4px solid #22c55e;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        ul {
+            padding-right: 20px;
+            margin-bottom: 10px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .footer {
+            margin-top: 40px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+        }
+        .highlight {
+            font-weight: 700;
+            color: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div>
+            <h1>مهمة عمل هندسية: TASK-0003-A (تحدي التصميم البرمجي)</h1>
+            <p style="margin: 5px 0 0 0; color: #64748b;">المشروع: Social-Commerce-Hub | المستوى: Junior .NET Developer (Hands-on)</p>
+        </div>
+        <div class="badge">وضع التحدي: بدون كود جاهز 🚀</div>
+    </div>
+
+    <div class="card">
+        <h2>1. الهدف الهندسي والمطلوب منك برمجته</h2>
+        <p>مطلوب منك كتابة كلاسين كاملين في مسار المشروع: <code>products/social-commerce-hub/src/backend/SocialCommerce.Domain/Entities/</code>:</p>
+        <ol>
+            <li><strong><code>Merchant.cs</code></strong>: يمثل التاجر وحسابه ومتجره على المنصة.</li>
+            <li><strong><code>Product.cs</code></strong>: يمثل المنتج المعروض في المتجر وفي الفيد التفاعلي.</li>
+        </ol>
+    </div>
+
+    <div class="card">
+        <h2>2. قواعد البيزنس الصارمة المطلوبة لكلاس التاجر (Merchant Invariants)</h2>
+        <div class="challenge-box">
+            <span class="highlight">⚠️ متطلبات التصميم:</span>
+            <ul>
+                <li><strong>البيانات الأساسية:</strong> <code>Id</code> (Guid), <code>StoreName</code>, <code>Slug</code> (رابط المتجر), <code>Email</code>, <code>Balance</code> (الرصيد), <code>IsActive</code> (حالة المتجر), <code>CreatedAtUtc</code>.</li>
+                <li><strong>شروط الإنشاء (Constructor Guard Clauses):</strong>
+                    <ul>
+                        <li>اسم المتجر لا يمكن أن يكون فارغاً أو مسافات فقط.</li>
+                        <li>الرابط (Slug) لا يمكن أن يكون فارغاً، ويجب تحويله دائماً لحروف صغيرة (Lowercase).</li>
+                        <li>البريد الإلكتروني لا يمكن أن يكون فارغاً.</li>
+                        <li>الرصيد المبدئي لأي تاجر جديد يجب أن يبدأ دائماً بصفر (0).</li>
+                        <li>حالة المتجر تبدأ نشطة (<code>IsActive = true</code>).</li>
+                    </ul>
+                </li>
+                <li><strong>سلوكيات العمل (Business Methods):</strong>
+                    <ul>
+                        <li>دالة <strong>إضافة رصيد (CreditBalance):</strong> تقبل قيمة موجبة فقط؛ لو القيمة صفر أو سالبة ترفض وترمي استثناء.</li>
+                        <li>دالة <strong>سحب/تسوية رصيد (PayoutBalance):</strong> تخصم من رصيد التاجر، ولا تسمح بالسحب إذا كان المبلغ المطلوب أكبر من الرصيد الحالي للتاجر (تمنع الرصيد السالب).</li>
+                        <li>دالة <strong>تجميد/إلغاء تنشيط المتجر (Deactivate):</strong> تقوم بتعطيل المتجر.</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>3. قواعد البيزنس الصارمة المطلوبة لكلاس المنتج (Product Invariants)</h2>
+        <div class="challenge-box">
+            <span class="highlight">⚠️ متطلبات التصميم:</span>
+            <ul>
+                <li><strong>البيانات الأساسية:</strong> <code>Id</code>, <code>MerchantId</code> (Guid), <code>Title</code>, <code>Price</code> (decimal), <code>MediaUrl</code>, <code>IsVideo</code> (bool), <code>StockQuantity</code> (int), <code>CreatedAtUtc</code>.</li>
+                <li><strong>شروط الإنشاء:</strong>
+                    <ul>
+                        <li>يجب التأكد من أن <code>MerchantId</code> ليس فارغاً (<code>Guid.Empty</code>).</li>
+                        <li>عنوان المنتج لا يمكن أن يكون فارغاً.</li>
+                        <li>السعر لا يمكن أن يكون سالباً (يسمح بصفر لو المنتج هدية/مجاني، ولكن ليس سالب).</li>
+                        <li>رابط الميديا لا يمكن أن يكون فارغاً.</li>
+                        <li>المخزون المبدئي لا يمكن أن يكون سالباً.</li>
+                    </ul>
+                </li>
+                <li><strong>سلوكيات العمل (Business Methods):</strong>
+                    <ul>
+                        <li>دالة <strong>تعديل السعر (UpdatePrice):</strong> تمنع وضع سعر سالب.</li>
+                        <li>دالة <strong>خصم المخزون عند الشراء (ReduceStock):</strong> تقبل كمية مشتراة موجبة، وترفض العملية وترمي <code>InvalidOperationException</code> لو كانت الكمية المطلوبة أكبر من المخزون المتوفر.</li>
+                        <li>دالة <strong>إعادة تعبئة المخزون (Restock):</strong> تضيف كمية للمخزون وترفض الكميات السالبة أو الصفرية.</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>4. فخاخ برمجية يقع فيها الـ Junior Developers (احذر منها!)</h2>
+        <div class="rule-box">
+            <ul>
+                <li><strong>الفخ الأول:</strong> ترك الخصائص <code>public set</code>. (ممنوع تماماً! استخدم <code>private set</code>).</li>
+                <li><strong>الفخ الثاني:</strong> استخدام <code>DateTime.Now</code> بدلاً من <code>DateTime.UtcNow</code>. (احرص على استخدام التوقيت العالمي الموحد).</li>
+                <li><strong>الفخ الثالث:</strong> نسيان الـ Parameterless Constructor الخاص بالـ EF Core. (اعمل <code>private Merchant() { }</code> بدون معاملات عشان الداتابيز تعرف تنشئه لاحقاً).</li>
+                <li><strong>الفخ الرابع:</strong> استخدام أنواع بيانات عائمة (Float/Double) للمبالغ المالية. (المبالغ المالية دائماً <code>decimal</code>).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>5. قائمة الفحص الذاتي للتسليم</h2>
+        <ul>
+            <li>[ ] الكلاسات تم إنشاؤها داخل مشروع <code>SocialCommerce.Domain</code>.</li>
+            <li>[ ] قمت بتطبيق كل الـ Invariants والـ Business Methods المذكورة أعلاه.</li>
+            <li>[ ] الـ Solution بيعمل <code>dotnet build</code> بدون أي Errors.</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <p><strong>كده التحدي حقيقي وواقعي بدون أي حلول جاهزة!</strong></p>
+        <p>بمجرد ما تكتب الكود وتتأكد منه، أرسل في الشات: <strong>Junior .NET : انا خلصت</strong></p>
+        <p>وسأقوم أنا ومراجع الكود والـ QA بفحص ومراجعة حلك بدقة تامة وتقديم مراجعة شاملة.</p>
+    </div>
+
+</body>
+</html>

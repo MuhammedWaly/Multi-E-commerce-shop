@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="SocialCommerce.Api/SocialCommerce.Api.csproj" />
+  <Project Path="SocialCommerce.Application/SocialCommerce.Application.csproj" />
+  <Project Path="SocialCommerce.Domain/SocialCommerce.Domain.csproj" />
+  <Project Path="SocialCommerce.Infrastructure/SocialCommerce.Infrastructure.csproj" />
+  <Project Path="SocialCommerce.Tests/SocialCommerce.Tests.csproj" />
+</Solution>
