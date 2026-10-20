@@ -15,6 +15,7 @@ public class SocialCommerceDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<MerchantLedgerEntry> MerchantLedgerEntries => Set<MerchantLedgerEntry>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +80,17 @@ public class SocialCommerceDbContext : DbContext
             b.Property(l => l.Description).IsRequired().HasMaxLength(500);
             b.HasIndex(l => l.MerchantId);
             b.HasIndex(l => l.OrderId);
+        });
+
+        // Review Configuration
+        modelBuilder.Entity<Review>(b =>
+        {
+            b.HasKey(r => r.Id);
+            b.Property(r => r.CustomerName).IsRequired().HasMaxLength(150);
+            b.Property(r => r.CustomerEmail).IsRequired().HasMaxLength(255);
+            b.Property(r => r.Comment).IsRequired().HasMaxLength(1000);
+            b.HasIndex(r => r.ProductId);
+            b.HasIndex(r => r.OrderId);
         });
     }
 }

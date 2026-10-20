@@ -111,6 +111,62 @@ public class OrderServiceTests : IDisposable
         Assert.Contains(ledger, l => l.Type == "FeeDeduction" && l.Amount == 50m);
     }
 
+    [Fact]
+    public async Task GetMerchantDashboardAsync_Should_Calculate_Totals_Accurately()
+    {
+        var merchant = new Merchant("Fayoum Pottery", "fayoum-pottery", "pottery@store.com");
+        _db.Merchants.Add(merchant);
+        var product = new Product(merchant.Id, "Stoneware Mug", 300m, "http://img.com/mug.jpg", false, 20);
+        _db.Products.Add(product);
+        await _db.SaveChangesAsync();
+
+        var createReq = new CreateOrderRequest(
+            merchant.Id,
+            "Nour",
+            "nour@test.com",
+            "Maadi, Cairo",
+            new List<CreateOrderItemRequest> { new CreateOrderItemRequest(product.Id, 2) }
+        );
+
+        var order = await _orderService.CreateOrderAsync(createReq);
+        await _orderService.CaptureOrderAsync(order.Id, new CaptureOrderRequest(order.PaymentOrderId!, "PAYER-DEMO"));
+
+        var dashboard = await _orderService.GetMerchantDashboardAsync(merchant.Id);
+
+        Assert.NotNull(dashboard);
+        Assert.Equal(merchant.Id, dashboard.MerchantId);
+        Assert.Equal("Fayoum Pottery", dashboard.StoreName);
+        Assert.Equal(1, dashboard.TotalOrdersCount);
+        Assert.Equal(600m, dashboard.TotalGrossSales);
+        Assert.Equal(30m, dashboard.TotalPlatformFees);
+        Assert.Equal(570m, dashboard.TotalNetEarnings);
+        Assert.Equal(1, dashboard.TotalProductsCount);
+        Assert.Single(dashboard.RecentOrders);
+    }
+
+    [Fact]
+    public async Task UpdateOrderStatusAsync_Should_Transition_Status_To_Fulfilled()
+    {
+        var merchant = new Merchant("Cairo Leather", "cairo-leather-test", "test@store.com");
+        _db.Merchants.Add(merchant);
+        var product = new Product(merchant.Id, "Cardholder", 200m, "http://img.com/card.jpg", false, 5);
+        _db.Products.Add(product);
+        await _db.SaveChangesAsync();
+
+        var order = await _orderService.CreateOrderAsync(new CreateOrderRequest(
+            merchant.Id,
+            "Ahmed",
+            "ahmed@test.com",
+            "Alexandria",
+            new List<CreateOrderItemRequest> { new CreateOrderItemRequest(product.Id, 1) }
+        ));
+
+        await _orderService.CaptureOrderAsync(order.Id, new CaptureOrderRequest(order.PaymentOrderId!, "PAYER-1"));
+
+        var updated = await _orderService.UpdateOrderStatusAsync(order.Id, "Fulfilled");
+        Assert.Equal("Fulfilled", updated.Status);
+    }
+
     public void Dispose()
     {
         _db.Dispose();

@@ -65,5 +65,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
+  },
+  {
+    "approval_id": "APR-0007",
+    "timestamp": "2026-10-20T16:33:35+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "COMMIT_AUTHORIZATION",
+    "target_id": "TASK-0005-AND-REVIEWS",
+    "scope_description": "Explicit owner authorization to implement and commit the Merchant Portal & Store Management Engine (TASK-0005) and Verified Reviews Engine (Feature 4): KPI dashboard, orders fulfillment table, product publisher, review authentication against paid orders, rating recalculation, and 23 passing xUnit unit tests.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
   }
 ]

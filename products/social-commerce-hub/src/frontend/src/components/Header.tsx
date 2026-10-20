@@ -9,6 +9,8 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   onNavigateHome: () => void;
   onOpenMerchantModal: () => void;
+  isMerchantMode: boolean;
+  onToggleMerchantMode: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,7 +21,9 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   onNavigateHome,
-  onOpenMerchantModal
+  onOpenMerchantModal,
+  isMerchantMode,
+  onToggleMerchantMode
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-xl">
@@ -50,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
                 SocialHub
               </span>
               <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Marketplace
+                {isMerchantMode ? 'Seller Portal' : 'Marketplace'}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">Curated Multi-Store E-Commerce</p>
@@ -58,42 +62,51 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Global Smart Search Bar (Desktop Center) */}
-        <div className="flex-1 max-w-2xl relative hidden md:block">
-          <div className="relative flex items-center">
-            <span className="absolute left-4 text-slate-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search boutique apparel, handcrafted leather, ceramics, or stores..."
-              className="w-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-100 pl-11 pr-24 py-2.5 rounded-2xl text-sm transition-all shadow-inner"
-            />
-            <span className="absolute right-3 text-xs bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1 rounded-lg">
-              ⌘K
-            </span>
+        {!isMerchantMode && (
+          <div className="flex-1 max-w-2xl relative hidden md:block">
+            <div className="relative flex items-center">
+              <span className="absolute left-4 text-slate-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Search boutique apparel, handcrafted leather, ceramics, or stores..."
+                className="w-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-100 pl-11 pr-24 py-2.5 rounded-2xl text-sm transition-all shadow-inner"
+              />
+              <span className="absolute right-3 text-xs bg-slate-800 text-slate-400 border border-slate-700 px-2 py-1 rounded-lg">
+                ⌘K
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Action Controls & Cart */}
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          {/* Currency Switcher */}
-          <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-300 bg-slate-900 border border-slate-800 px-3 py-2 rounded-xl">
-            <span>🇪🇬</span>
-            <span className="font-semibold">EGP</span>
-          </div>
+          {/* Mode Switcher: Shopper vs Merchant Portal */}
+          <button
+            onClick={onToggleMerchantMode}
+            className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
+              isMerchantMode
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                : 'bg-indigo-600/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-600/30'
+            }`}
+          >
+            <span>{isMerchantMode ? '🛍️ Back to Shopper' : '🏪 Merchant Portal'}</span>
+          </button>
 
           {/* Become a Seller CTA */}
-          <button
-            onClick={onOpenMerchantModal}
-            className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3.5 py-2.5 rounded-xl transition-colors cursor-pointer"
-          >
-            <span>🏬</span>
-            <span>Open a Store</span>
-          </button>
+          {!isMerchantMode && (
+            <button
+              onClick={onOpenMerchantModal}
+              className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3.5 py-2.5 rounded-xl transition-colors cursor-pointer"
+            >
+              <span>+ Open Store</span>
+            </button>
+          )}
 
           {/* Cart Slide-Over Trigger */}
           <button
@@ -114,30 +127,32 @@ export const Header: React.FC<HeaderProps> = ({
 
       </div>
 
-      {/* Secondary Category Subheader (Desktop Horizontal Scroll) */}
-      <div className="border-t border-slate-800/80 bg-slate-950/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 overflow-x-auto py-2 no-scrollbar text-sm">
-          {[
-            { id: 'all', label: '🔥 All Discoveries' },
-            { id: 'fashion', label: '👗 Fashion & Apparel' },
-            { id: 'leather', label: '👜 Handcrafted Leather' },
-            { id: 'home', label: '🏺 Ceramics & Home' },
-            { id: 'accessories', label: '✨ Accessories' }
-          ].map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => onSelectCategory(cat.id)}
-              className={`whitespace-nowrap px-4 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeCategory === cat.id
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+      {/* Secondary Category Subheader (Shopper View Only) */}
+      {!isMerchantMode && (
+        <div className="border-t border-slate-800/80 bg-slate-950/70">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 overflow-x-auto py-2 no-scrollbar text-sm">
+            {[
+              { id: 'all', label: '🔥 All Discoveries' },
+              { id: 'fashion', label: '👗 Fashion & Apparel' },
+              { id: 'leather', label: '👜 Handcrafted Leather' },
+              { id: 'home', label: '🏺 Ceramics & Home' },
+              { id: 'accessories', label: '✨ Accessories' }
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => onSelectCategory(cat.id)}
+                className={`whitespace-nowrap px-4 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  activeCategory === cat.id
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 };

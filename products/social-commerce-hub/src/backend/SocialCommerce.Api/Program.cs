@@ -19,6 +19,7 @@ builder.Services.AddDbContext<SocialCommerceDbContext>(options =>
 // Register Core Domain & Catalog Services
 builder.Services.AddScoped<ICatalogService, CatalogService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 
 // Register Payment Engine
 builder.Services.AddSingleton<IPaymentProvider, PayPalPaymentProvider>();
@@ -140,6 +141,24 @@ app.MapPost("/api/orders/{id:guid}/capture", async (Guid id, CaptureOrderRequest
 })
 .WithName("CaptureOrder");
 
+app.MapPatch("/api/orders/{id:guid}/status", async (Guid id, UpdateOrderStatusRequest request, IOrderService orderService, CancellationToken ct) =>
+{
+    try
+    {
+        var order = await orderService.UpdateOrderStatusAsync(id, request.Status, ct);
+        return Results.Ok(order);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("UpdateOrderStatus");
+
 // Legacy fast checkout simulation endpoint for frontend compatibility
 app.MapPost("/api/payments/create-order", async (PaymentOrderRequest request, IPaymentProviderFactory paymentFactory, CancellationToken ct) =>
 {
@@ -153,13 +172,55 @@ app.MapPost("/api/payments/create-order", async (PaymentOrderRequest request, IP
 .WithName("CreatePaymentOrder");
 
 // ==========================================
-// 4. Merchant Financial Ledger Endpoints
+// 4. Merchant Dashboard & Financial Ledger
 // ==========================================
+app.MapGet("/api/merchants/{merchantId:guid}/dashboard", async (Guid merchantId, IOrderService orderService, CancellationToken ct) =>
+{
+    var dashboard = await orderService.GetMerchantDashboardAsync(merchantId, ct);
+    return dashboard is not null ? Results.Ok(dashboard) : Results.NotFound(new { error = "Merchant not found." });
+})
+.WithName("GetMerchantDashboard");
+
+app.MapGet("/api/merchants/{merchantId:guid}/orders", async (Guid merchantId, IOrderService orderService, CancellationToken ct) =>
+{
+    var orders = await orderService.GetMerchantOrdersAsync(merchantId, ct);
+    return Results.Ok(orders);
+})
+.WithName("GetMerchantOrders");
+
 app.MapGet("/api/merchants/{merchantId:guid}/ledger", async (Guid merchantId, IOrderService orderService, CancellationToken ct) =>
 {
     var ledger = await orderService.GetMerchantLedgerAsync(merchantId, ct);
     return Results.Ok(ledger);
 })
 .WithName("GetMerchantLedger");
+
+// ==========================================
+// 5. Verified Review & Rating Engine
+// ==========================================
+app.MapGet("/api/products/{id:guid}/reviews", async (Guid id, IReviewService reviewService, CancellationToken ct) =>
+{
+    var reviews = await reviewService.GetProductReviewsAsync(id, ct);
+    return Results.Ok(reviews);
+})
+.WithName("GetProductReviews");
+
+app.MapPost("/api/products/{id:guid}/reviews", async (Guid id, CreateReviewRequest request, IReviewService reviewService, CancellationToken ct) =>
+{
+    try
+    {
+        var review = await reviewService.AddReviewAsync(id, request, ct);
+        return Results.Created($"/api/reviews/{review.Id}", review);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("AddProductReview");
 
 app.Run();

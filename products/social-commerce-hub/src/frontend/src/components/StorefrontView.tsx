@@ -8,6 +8,7 @@ interface StorefrontViewProps {
   onBackToMarketplace: () => void;
   onQuickBuy: (product: Product) => void;
   onAddToCart: (product: Product) => void;
+  onOpenReviews?: (product: Product) => void;
 }
 
 export const StorefrontView: React.FC<StorefrontViewProps> = ({
@@ -15,7 +16,8 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
   products,
   onBackToMarketplace,
   onQuickBuy,
-  onAddToCart
+  onAddToCart,
+  onOpenReviews
 }) => {
   const merchantProducts = products.filter(p => p.merchantId === merchant.id);
 
@@ -109,6 +111,7 @@ export const StorefrontView: React.FC<StorefrontViewProps> = ({
               onQuickBuy={onQuickBuy}
               onAddToCart={onAddToCart}
               onStoreClick={() => {}}
+              onOpenReviews={onOpenReviews}
             />
           ))}
         </div>

@@ -6,13 +6,15 @@ interface ProductCardProps {
   onQuickBuy: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   onStoreClick: (storeSlug: string) => void;
+  onOpenReviews?: (product: Product) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
   product,
   onQuickBuy,
   onAddToCart,
-  onStoreClick
+  onStoreClick,
+  onOpenReviews
 }) => {
   const discountPercent = product.originalPrice 
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
@@ -43,11 +45,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </div>
 
-        <div className="absolute top-3 right-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-amber-300 shadow border border-amber-500/20 flex items-center gap-1">
+        {/* Star Rating Badge (Clickable to open Verified Reviews) */}
+        <button
+          onClick={() => onOpenReviews?.(product)}
+          className="absolute top-3 right-3 bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-amber-300 shadow border border-amber-500/20 flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
+          title="View Verified Customer Reviews"
+        >
           <span>★</span>
           <span>{product.rating}</span>
           <span className="text-[10px] text-slate-400">({product.reviewCount})</span>
-        </div>
+        </button>
 
         {/* Merchant Tag */}
         <button

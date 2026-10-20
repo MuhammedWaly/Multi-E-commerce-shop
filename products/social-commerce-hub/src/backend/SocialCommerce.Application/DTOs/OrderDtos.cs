@@ -61,3 +61,19 @@ public record MerchantLedgerEntryDto(
     string Description,
     DateTime CreatedAtUtc
 );
+
+public record MerchantDashboardDto(
+    Guid MerchantId,
+    string StoreName,
+    decimal Balance,
+    int TotalOrdersCount,
+    decimal TotalGrossSales,
+    decimal TotalNetEarnings,
+    decimal TotalPlatformFees,
+    int TotalProductsCount,
+    IReadOnlyList<OrderDto> RecentOrders
+);
+
+public record UpdateOrderStatusRequest(
+    string Status
+);

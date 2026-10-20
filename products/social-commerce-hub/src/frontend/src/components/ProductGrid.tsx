@@ -7,13 +7,15 @@ interface ProductGridProps {
   onQuickBuy: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   onStoreClick: (storeSlug: string) => void;
+  onOpenReviews?: (product: Product) => void;
 }
 
 export const ProductGrid: React.FC<ProductGridProps> = ({
   products,
   onQuickBuy,
   onAddToCart,
-  onStoreClick
+  onStoreClick,
+  onOpenReviews
 }) => {
   const [sortBy, setSortBy] = useState<string>('featured');
 
@@ -65,6 +67,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
               onQuickBuy={onQuickBuy}
               onAddToCart={onAddToCart}
               onStoreClick={onStoreClick}
+              onOpenReviews={onOpenReviews}
             />
           ))}
         </div>

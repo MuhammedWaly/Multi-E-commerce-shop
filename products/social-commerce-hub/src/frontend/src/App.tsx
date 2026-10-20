@@ -5,6 +5,8 @@ import { FeaturedStores } from './components/FeaturedStores';
 import { SidebarFilters } from './components/SidebarFilters';
 import { ProductGrid } from './components/ProductGrid';
 import { StorefrontView } from './components/StorefrontView';
+import { MerchantDashboard } from './components/MerchantDashboard';
+import { ReviewsModal } from './components/ReviewsModal';
 import { CartSlideOver } from './components/CartSlideOver';
 import { CreateMerchantModal } from './components/CreateMerchantModal';
 import { Footer } from './components/Footer';
@@ -21,12 +23,14 @@ export const App: React.FC = () => {
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   
   // Navigation / views
+  const [isMerchantMode, setIsMerchantMode] = useState<boolean>(false);
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
 
   // Cart & Modals
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isMerchantModalOpen, setIsMerchantModalOpen] = useState<boolean>(false);
+  const [reviewProduct, setReviewProduct] = useState<Product | null>(null);
 
   // Sync with backend API
   useEffect(() => {
@@ -34,7 +38,6 @@ export const App: React.FC = () => {
       .then((res) => (res.ok ? res.json() : null))
       .then((feed) => {
         if (feed && Array.isArray(feed) && feed.length > 0) {
-          // Map backend feed items to frontend product shape
           const apiProducts: Product[] = feed.map((item: any, idx: number) => ({
             id: item.id,
             merchantId: item.merchantId,
@@ -60,26 +63,19 @@ export const App: React.FC = () => {
 
   // Filter Pipeline
   const filteredProducts = products.filter((product) => {
-    // 1. Category
     if (activeCategory !== 'all' && product.category !== activeCategory) {
       return false;
     }
-    // 2. Search Query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchTitle = product.title.toLowerCase().includes(q);
       const matchStore = product.storeName.toLowerCase().includes(q);
       if (!matchTitle && !matchStore) return false;
     }
-    // 3. Price Filter
     if (priceFilter === 'under500' && product.price >= 500) return false;
     if (priceFilter === '500to1000' && (product.price < 500 || product.price > 1000)) return false;
     if (priceFilter === 'over1000' && product.price <= 1000) return false;
-
-    // 4. Rating
     if (minRating > 0 && product.rating < minRating) return false;
-
-    // 5. In Stock
     if (inStockOnly && product.stockQuantity <= 0) return false;
 
     return true;
@@ -126,6 +122,7 @@ export const App: React.FC = () => {
     const merchant = merchants.find((m) => m.slug === slug);
     if (merchant) {
       setSelectedMerchant(merchant);
+      setIsMerchantMode(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -147,17 +144,41 @@ export const App: React.FC = () => {
         activeCategory={activeCategory}
         onSelectCategory={(cat) => {
           setSelectedMerchant(null);
+          setIsMerchantMode(false);
           setActiveCategory(cat);
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onNavigateHome={() => setSelectedMerchant(null)}
+        onNavigateHome={() => {
+          setSelectedMerchant(null);
+          setIsMerchantMode(false);
+        }}
         onOpenMerchantModal={() => setIsMerchantModalOpen(true)}
+        isMerchantMode={isMerchantMode}
+        onToggleMerchantMode={() => {
+          setIsMerchantMode(!isMerchantMode);
+          setSelectedMerchant(null);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
       />
 
       {/* Main View Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {selectedMerchant ? (
+        {isMerchantMode ? (
+          /* Merchant Store Management Portal */
+          <MerchantDashboard
+            merchants={merchants}
+            products={products}
+            onAddProduct={(newProduct) => {
+              setProducts((prev) => [newProduct, ...prev]);
+            }}
+            onViewPublicStore={(merchant) => {
+              setIsMerchantMode(false);
+              setSelectedMerchant(merchant);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        ) : selectedMerchant ? (
           /* Dedicated Independent Merchant Storefront View */
           <StorefrontView
             merchant={selectedMerchant}
@@ -165,6 +186,7 @@ export const App: React.FC = () => {
             onBackToMarketplace={() => setSelectedMerchant(null)}
             onQuickBuy={handleQuickBuy}
             onAddToCart={handleAddToCart}
+            onOpenReviews={(prod) => setReviewProduct(prod)}
           />
         ) : (
           /* Multi-Merchant Marketplace Homepage View */
@@ -228,6 +250,7 @@ export const App: React.FC = () => {
                   onQuickBuy={handleQuickBuy}
                   onAddToCart={handleAddToCart}
                   onStoreClick={handleStoreClick}
+                  onOpenReviews={(prod) => setReviewProduct(prod)}
                 />
               </div>
             </div>
@@ -267,6 +290,29 @@ export const App: React.FC = () => {
             },
             ...prev
           ]);
+        }}
+      />
+
+      {/* Verified Product Reviews Modal */}
+      <ReviewsModal
+        product={reviewProduct}
+        isOpen={!!reviewProduct}
+        onClose={() => setReviewProduct(null)}
+        onReviewAdded={(prodId, newRating) => {
+          setProducts((prev) =>
+            prev.map((p) => {
+              if (p.id === prodId) {
+                const total = p.rating * p.reviewCount + newRating;
+                const newCount = p.reviewCount + 1;
+                return {
+                  ...p,
+                  reviewCount: newCount,
+                  rating: Math.round((total / newCount) * 10) / 10
+                };
+              }
+              return p;
+            })
+          );
         }}
       />
 

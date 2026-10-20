@@ -9,6 +9,8 @@ public class Product
     public string MediaUrl { get; private set; } = string.Empty;
     public bool IsVideo { get; private set; }
     public int StockQuantity { get; private set; }
+    public double RatingAverage { get; private set; }
+    public int ReviewCount { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
 
     // Parameterless constructor required by EF Core
@@ -38,6 +40,8 @@ public class Product
         MediaUrl = mediaUrl.Trim();
         IsVideo = isVideo;
         StockQuantity = initialStock;
+        RatingAverage = 5.0; // Initial default
+        ReviewCount = 0;
         CreatedAtUtc = DateTime.UtcNow;
     }
 
@@ -66,5 +70,15 @@ public class Product
             throw new ArgumentException("Quantity to restock must be strictly positive.", nameof(quantity));
 
         StockQuantity += quantity;
+    }
+
+    public void AddReviewRating(int newStarRating)
+    {
+        if (newStarRating < 1 || newStarRating > 5)
+            throw new ArgumentException("Star rating must be between 1 and 5.", nameof(newStarRating));
+
+        var currentTotal = ReviewCount == 0 ? 0 : RatingAverage * ReviewCount;
+        ReviewCount++;
+        RatingAverage = Math.Round((currentTotal + newStarRating) / ReviewCount, 2);
     }
 }

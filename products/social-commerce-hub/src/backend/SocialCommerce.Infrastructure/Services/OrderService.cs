@@ -156,6 +156,78 @@ public class OrderService : IOrderService
             .ToListAsync(ct);
     }
 
+    public async Task<MerchantDashboardDto?> GetMerchantDashboardAsync(Guid merchantId, CancellationToken ct = default)
+    {
+        var merchant = await _db.Merchants.AsNoTracking().FirstOrDefaultAsync(m => m.Id == merchantId, ct);
+        if (merchant == null)
+            return null;
+
+        var orders = await _db.Orders
+            .Include(o => o.Items)
+            .AsNoTracking()
+            .Where(o => o.MerchantId == merchantId)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .ToListAsync(ct);
+
+        var productsCount = await _db.Products.CountAsync(p => p.MerchantId == merchantId, ct);
+
+        var activeOrders = orders.Where(o => o.Status != OrderStatus.Cancelled).ToList();
+
+        var totalGross = activeOrders.Sum(o => o.TotalAmount);
+        var totalFees = activeOrders.Sum(o => o.PlatformFeeAmount);
+        var totalNet = activeOrders.Sum(o => o.MerchantNetAmount);
+
+        return new MerchantDashboardDto(
+            merchant.Id,
+            merchant.StoreName,
+            merchant.Balance,
+            orders.Count,
+            totalGross,
+            totalNet,
+            totalFees,
+            productsCount,
+            orders.Take(10).Select(MapToDto).ToList()
+        );
+    }
+
+    public async Task<IReadOnlyList<OrderDto>> GetMerchantOrdersAsync(Guid merchantId, CancellationToken ct = default)
+    {
+        var orders = await _db.Orders
+            .Include(o => o.Items)
+            .AsNoTracking()
+            .Where(o => o.MerchantId == merchantId)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .ToListAsync(ct);
+
+        return orders.Select(MapToDto).ToList();
+    }
+
+    public async Task<OrderDto> UpdateOrderStatusAsync(Guid orderId, string newStatus, CancellationToken ct = default)
+    {
+        var order = await _db.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+        if (order == null)
+            throw new ArgumentException("Order not found.", nameof(orderId));
+
+        if (newStatus.Equals("Fulfilled", StringComparison.OrdinalIgnoreCase))
+        {
+            order.MarkAsFulfilled();
+        }
+        else if (newStatus.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+        {
+            order.Cancel();
+        }
+        else
+        {
+            throw new ArgumentException($"Unsupported status transition to: '{newStatus}'");
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return MapToDto(order);
+    }
+
     private static OrderDto MapToDto(Order order)
     {
         return new OrderDto(
