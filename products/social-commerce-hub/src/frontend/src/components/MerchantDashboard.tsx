@@ -1,21 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import type { Merchant, Product } from '../types';
-import { api } from '../services/api';
+import { api, type UserDto } from '../services/api';
 
 interface MerchantDashboardProps {
   merchants: Merchant[];
   products: Product[];
   onAddProduct: (newProduct: Product) => void;
   onViewPublicStore: (merchant: Merchant) => void;
+  currentUser?: UserDto | null;
+  onOpenAuthModal?: () => void;
 }
 
 export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   merchants,
   products,
   onAddProduct,
-  onViewPublicStore
+  onViewPublicStore,
+  currentUser,
+  onOpenAuthModal
 }) => {
-  const [selectedMerchantId, setSelectedMerchantId] = useState<string>(merchants[0]?.id || 'm1');
+  // Guard: Only authenticated merchants with role 'Merchant' have access to manage a store dashboard
+  if (currentUser?.role !== 'Merchant') {
+    return (
+      <div className="max-w-2xl mx-auto py-16 px-4 text-center animate-fade-in">
+        <div className="bg-slate-900 border border-purple-500/30 rounded-3xl p-8 shadow-2xl">
+          <div className="w-16 h-16 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-purple-500/30">
+            🏪
+          </div>
+          <h2 className="text-2xl font-black text-white mb-2">Merchant Store Access Restricted</h2>
+          <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">
+            Each merchant has exclusive control over their own store. You are currently signed in as{' '}
+            <span className="text-white font-bold">{currentUser?.fullName || 'Guest'}</span>{' '}
+            ({currentUser?.role || 'Guest'}).
+            {currentUser?.role === 'Admin'
+              ? ' As an administrator, you manage store suspension and catalog moderation from the Admin Command Center.'
+              : ' To manage products and sales, please sign in with your verified merchant account.'}
+          </p>
+          {currentUser?.role !== 'Admin' && onOpenAuthModal && (
+            <button
+              onClick={onOpenAuthModal}
+              className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
+            >
+              Sign In as Store Merchant
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const userMerchant = merchants.find(m => m.id === currentUser.merchantId || m.slug === currentUser.storeSlug) 
+                     || merchants[0] 
+                     || { id: currentUser.merchantId || 'm-default', name: currentUser.fullName, slug: currentUser.storeSlug || 'store', tagline: 'Independent Boutique', avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200' } as Merchant;
+
+  const currentMerchant = userMerchant;
+  const merchantProducts = products.filter(p => p.merchantId === currentMerchant.id);
+
   const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'ledger'>('orders');
 
   // New product form state
@@ -25,10 +65,6 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   const [newCategory, setNewCategory] = useState<'fashion' | 'leather' | 'accessories' | 'home'>('fashion');
   const [newStock, setNewStock] = useState('10');
   const [publishSuccess, setPublishSuccess] = useState(false);
-
-  // Orders state
-  const currentMerchant = merchants.find(m => m.id === selectedMerchantId) || merchants[0];
-  const merchantProducts = products.filter(p => p.merchantId === currentMerchant.id);
 
   const [metrics, setMetrics] = useState({
     availableBalance: 14250,
@@ -193,6 +229,26 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       
+      {/* Tenant Security Banner */}
+      {(!currentUser || currentUser.role !== 'Merchant') && (
+        <div className="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
+          <div className="flex items-center gap-2 text-amber-300">
+            <span className="text-base">🔒</span>
+            <span>
+              Viewing in <strong>Store Preview</strong> mode. To publish products, dispatch customer orders, or disburse payments, sign in as a verified merchant.
+            </span>
+          </div>
+          {onOpenAuthModal && (
+            <button
+              onClick={onOpenAuthModal}
+              className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-md"
+            >
+              Sign In as Merchant →
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Merchant Bar & Selector */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
@@ -213,20 +269,13 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Merchant Switcher */}
-          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl text-xs">
-            <span className="text-slate-400">Manage Store:</span>
-            <select
-              value={selectedMerchantId}
-              onChange={(e) => setSelectedMerchantId(e.target.value)}
-              className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
-            >
-              {merchants.map(m => (
-                <option key={m.id} value={m.id} className="bg-slate-900 text-white">
-                  {m.name}
-                </option>
-              ))}
-            </select>
+          {/* Verified Store Ownership Badge */}
+          <div className="flex items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3.5 py-2 rounded-xl text-xs">
+            <span className="text-indigo-400 font-bold">🔒 Exclusive Store:</span>
+            <span className="text-white font-extrabold">{currentMerchant.name}</span>
+            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold">
+              Isolated Tenant
+            </span>
           </div>
 
           <button

@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
+import { Header, type PortalType } from './components/Header';
 import { HeroBanner } from './components/HeroBanner';
 import { FeaturedStores } from './components/FeaturedStores';
 import { SidebarFilters } from './components/SidebarFilters';
 import { ProductGrid } from './components/ProductGrid';
 import { StorefrontView } from './components/StorefrontView';
 import { MerchantDashboard } from './components/MerchantDashboard';
+import { AdminPortal } from './components/AdminPortal';
+import { BuyerOrdersModal } from './components/BuyerOrdersModal';
 import { ReviewsModal } from './components/ReviewsModal';
 import { CartSlideOver } from './components/CartSlideOver';
 import { CreateMerchantModal } from './components/CreateMerchantModal';
+import { AuthModal } from './components/AuthModal';
 import { Footer } from './components/Footer';
 import { mockMerchants, mockProducts } from './data/mockData';
-import { api } from './services/api';
+import { api, getStoredUser, type UserDto } from './services/api';
 import type { Merchant, Product, CartItem } from './types';
 
 export const App: React.FC = () => {
@@ -23,15 +26,38 @@ export const App: React.FC = () => {
   const [minRating, setMinRating] = useState<number>(0);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   
-  // Navigation / views
-  const [isMerchantMode, setIsMerchantMode] = useState<boolean>(false);
+  // Navigation / Views / RBAC Portals
+  const [activePortal, setActivePortal] = useState<PortalType>('buyer');
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
 
-  // Cart & Modals
+  // Cart, Modals & Auth State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [isMerchantModalOpen, setIsMerchantModalOpen] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isBuyerOrdersOpen, setIsBuyerOrdersOpen] = useState<boolean>(false);
   const [reviewProduct, setReviewProduct] = useState<Product | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserDto | null>(() => getStoredUser());
+
+  const handleAuthSuccess = (user: UserDto) => {
+    setCurrentUser(user);
+    if (user.role === 'Admin') {
+      setActivePortal('admin');
+      setSelectedMerchant(null);
+    } else if (user.role === 'Merchant') {
+      setActivePortal('merchant');
+      setSelectedMerchant(null);
+    } else {
+      setActivePortal('buyer');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setCurrentUser(null);
+    setActivePortal('buyer');
+  };
 
   // Sync with backend API
   useEffect(() => {
@@ -51,6 +77,7 @@ export const App: React.FC = () => {
             rating: item.rating || 4.9,
             reviewCount: 25 + idx * 7,
             stockQuantity: item.stockQuantity,
+            isVideo: item.isVideo,
             isFeatured: idx < 2
           }));
           setProducts(apiProducts);
@@ -130,7 +157,7 @@ export const App: React.FC = () => {
     const merchant = merchants.find((m) => m.slug === slug);
     if (merchant) {
       setSelectedMerchant(merchant);
-      setIsMerchantMode(false);
+      setActivePortal('buyer');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -152,36 +179,56 @@ export const App: React.FC = () => {
         activeCategory={activeCategory}
         onSelectCategory={(cat) => {
           setSelectedMerchant(null);
-          setIsMerchantMode(false);
+          setActivePortal('buyer');
           setActiveCategory(cat);
         }}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onNavigateHome={() => {
           setSelectedMerchant(null);
-          setIsMerchantMode(false);
+          setActivePortal('buyer');
         }}
         onOpenMerchantModal={() => setIsMerchantModalOpen(true)}
-        isMerchantMode={isMerchantMode}
-        onToggleMerchantMode={() => {
-          setIsMerchantMode(!isMerchantMode);
+        activePortal={activePortal}
+        onSelectPortal={(portal) => {
+          setActivePortal(portal);
           setSelectedMerchant(null);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        currentUser={currentUser}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenBuyerOrders={() => setIsBuyerOrdersOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main View Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {isMerchantMode ? (
+        {activePortal === 'admin' ? (
+          /* Platform Administration Command Center */
+          <AdminPortal
+            currentUser={currentUser}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
+            products={products}
+            onProductDeleted={(id) => {
+              setProducts((prev) => prev.filter((p) => p.id !== id));
+            }}
+            onMerchantDeleted={(id) => {
+              setMerchants((prev) => prev.filter((m) => m.id !== id));
+              setProducts((prev) => prev.filter((p) => p.merchantId !== id));
+            }}
+          />
+        ) : activePortal === 'merchant' ? (
           /* Merchant Store Management Portal */
           <MerchantDashboard
             merchants={merchants}
             products={products}
+            currentUser={currentUser}
+            onOpenAuthModal={() => setIsAuthModalOpen(true)}
             onAddProduct={(newProduct) => {
               setProducts((prev) => [newProduct, ...prev]);
             }}
             onViewPublicStore={(merchant) => {
-              setIsMerchantMode(false);
+              setActivePortal('buyer');
               setSelectedMerchant(merchant);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -276,6 +323,14 @@ export const App: React.FC = () => {
         onClearCart={() => setCartItems([])}
       />
 
+      {/* Buyer Orders History Modal */}
+      <BuyerOrdersModal
+        isOpen={isBuyerOrdersOpen}
+        onClose={() => setIsBuyerOrdersOpen(false)}
+        onOpenReviewModal={(prod) => setReviewProduct(prod)}
+        allProducts={products}
+      />
+
       {/* Merchant Registration Onboarding Modal */}
       <CreateMerchantModal
         isOpen={isMerchantModalOpen}
@@ -322,6 +377,13 @@ export const App: React.FC = () => {
             })
           );
         }}
+      />
+
+      {/* Modern Authentication Modal (JWT & Role Based) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
       />
 
       {/* Full Web Mega Footer */}

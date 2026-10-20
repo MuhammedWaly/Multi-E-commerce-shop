@@ -16,10 +16,23 @@ public class SocialCommerceDbContext : DbContext
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<MerchantLedgerEntry> MerchantLedgerEntries => Set<MerchantLedgerEntry>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // User Configuration
+        modelBuilder.Entity<User>(b =>
+        {
+            b.HasKey(u => u.Id);
+            b.Property(u => u.Email).IsRequired().HasMaxLength(255);
+            b.HasIndex(u => u.Email).IsUnique();
+            b.Property(u => u.FullName).IsRequired().HasMaxLength(150);
+            b.Property(u => u.PasswordHash).IsRequired().HasMaxLength(500);
+            b.Property(u => u.Salt).IsRequired().HasMaxLength(100);
+            b.HasIndex(u => u.MerchantId);
+        });
 
         // Merchant Configuration
         modelBuilder.Entity<Merchant>(b =>

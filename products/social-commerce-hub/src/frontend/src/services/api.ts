@@ -6,6 +6,34 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
+export interface UserDto {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'Customer' | 'Merchant' | 'Admin';
+  merchantId?: string;
+  storeSlug?: string;
+}
+
+export interface AuthResponseDto {
+  token: string;
+  user: UserDto;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  fullName: string;
+  role?: string;
+  storeName?: string;
+  storeSlug?: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
 export interface FeedItemDto {
   id: string;
   merchantId: string;
@@ -94,6 +122,53 @@ export interface MerchantLedgerEntryDto {
   createdAt: string;
 }
 
+export interface PlatformOverviewDto {
+  totalUsersCount: number;
+  totalBuyersCount: number;
+  totalMerchantsCount: number;
+  totalProductsCount: number;
+  totalOrdersCount: number;
+  totalGrossSales: number;
+  totalPlatformRevenue: number;
+  totalMerchantDisbursements: number;
+}
+
+export interface AdminMerchantDto {
+  id: string;
+  storeName: string;
+  slug: string;
+  ownerEmail: string;
+  isActive: boolean;
+  productsCount: number;
+  ordersCount: number;
+  totalSales: number;
+  createdAtUtc: string;
+}
+
+export interface AdminUserDto {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+  merchantId?: string;
+  storeSlug?: string;
+  createdAtUtc: string;
+}
+
+export interface AdminOrderDto {
+  id: string;
+  merchantId: string;
+  storeName: string;
+  customerName: string;
+  customerEmail: string;
+  shippingAddress: string;
+  totalAmount: number;
+  platformFeeAmount: number;
+  merchantNetAmount: number;
+  status: string;
+  createdAtUtc: string;
+}
+
 export interface ReviewDto {
   id: string;
   productId: string;
@@ -122,14 +197,50 @@ export interface CaptureOrderResult {
 }
 
 const API_BASE = '/api';
+const TOKEN_KEY = 'socialhub_auth_token';
+const USER_KEY = 'socialhub_auth_user';
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setStoredToken(token: string | null) {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+export function getStoredUser(): UserDto | null {
+  const data = localStorage.getItem(USER_KEY);
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUser(user: UserDto | null) {
+  if (user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_KEY);
+  }
+}
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  const token = getStoredToken();
+  const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
   const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...authHeaders,
       ...options?.headers,
     },
   });
@@ -145,6 +256,36 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  // Authentication & Profile
+  async login(data: LoginRequest): Promise<AuthResponseDto> {
+    const res = await request<AuthResponseDto>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    setStoredToken(res.token);
+    setStoredUser(res.user);
+    return res;
+  },
+
+  async register(data: RegisterRequest): Promise<AuthResponseDto> {
+    const res = await request<AuthResponseDto>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    setStoredToken(res.token);
+    setStoredUser(res.user);
+    return res;
+  },
+
+  async getMe(): Promise<UserDto> {
+    return request<UserDto>('/auth/me');
+  },
+
+  logout() {
+    setStoredToken(null);
+    setStoredUser(null);
+  },
+
   // Discovery Feed
   async getFeed(page = 1, pageSize = 20): Promise<FeedItemDto[]> {
     return request<FeedItemDto[]>(`/feed?page=${page}&pageSize=${pageSize}`);
@@ -195,6 +336,10 @@ export const api = {
     });
   },
 
+  async getMyOrders(): Promise<OrderDto[]> {
+    return request<OrderDto[]>('/orders/my-orders');
+  },
+
   async getOrder(id: string): Promise<OrderDto> {
     return request<OrderDto>(`/orders/${id}`);
   },
@@ -210,6 +355,42 @@ export const api = {
     return request<OrderDto>(`/orders/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
+    });
+  },
+
+  // Platform Admin Command Center
+  async getAdminOverview(): Promise<PlatformOverviewDto> {
+    return request<PlatformOverviewDto>('/admin/overview');
+  },
+
+  async getAdminMerchants(): Promise<AdminMerchantDto[]> {
+    return request<AdminMerchantDto[]>('/admin/merchants');
+  },
+
+  async updateMerchantStatus(id: string, isActive: boolean): Promise<boolean> {
+    return request<boolean>(`/admin/merchants/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    });
+  },
+
+  async adminDeleteMerchant(id: string): Promise<boolean> {
+    return request<boolean>(`/admin/merchants/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getAdminUsers(): Promise<AdminUserDto[]> {
+    return request<AdminUserDto[]>('/admin/users');
+  },
+
+  async getAdminOrders(): Promise<AdminOrderDto[]> {
+    return request<AdminOrderDto[]>('/admin/orders');
+  },
+
+  async adminDeleteProduct(id: string): Promise<boolean> {
+    return request<boolean>(`/admin/products/${id}`, {
+      method: 'DELETE',
     });
   },
 

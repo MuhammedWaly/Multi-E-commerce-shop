@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SocialCommerce.Application.Common;
 using SocialCommerce.Application.DTOs;
@@ -27,6 +29,24 @@ public class OrdersController : BaseApiController
     {
         var order = await _orderService.CreateOrderAsync(request, ct);
         return CreatedSuccess($"/api/orders/{order.Id}", order, "Order placed successfully.");
+    }
+
+    /// <summary>
+    /// Retrieves order history for the currently authenticated buyer
+    /// </summary>
+    [Authorize]
+    [HttpGet("my-orders")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<OrderDto>>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<OrderDto>>>> GetMyOrders(CancellationToken ct = default)
+    {
+        var email = User.FindFirstValue(ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Success<IReadOnlyList<OrderDto>>(Array.Empty<OrderDto>(), "No customer account identified.");
+        }
+
+        var orders = await _orderService.GetCustomerOrdersAsync(email, ct);
+        return Success(orders, "Customer orders retrieved successfully.");
     }
 
     /// <summary>
@@ -69,16 +89,36 @@ public class OrdersController : BaseApiController
     }
 
     /// <summary>
-    /// Updates operational fulfillment status of an order
+    /// Updates operational fulfillment status of an order (Protected: merchant tenant isolated)
     /// </summary>
+    [Authorize(Roles = "Merchant,Admin")]
     [HttpPatch("{id:guid}/status")]
     [ProducesResponseType(typeof(ApiResponse<OrderDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<OrderDto>>> UpdateOrderStatus(
         Guid id,
         [FromBody] UpdateOrderStatusRequest request,
         CancellationToken ct = default)
     {
+        var existingOrder = await _orderService.GetOrderByIdAsync(id, ct);
+        if (existingOrder == null)
+        {
+            return Failed<OrderDto>($"Order with ID '{id}' was not found.", "Order not found.", StatusCodes.Status404NotFound);
+        }
+
+        if (!User.IsInRole("Merchant"))
+        {
+            return Failed<OrderDto>("Access denied. Only the store merchant can update order fulfillment status.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
+        var userMerchantIdStr = User.FindFirst("merchantId")?.Value;
+        if (!Guid.TryParse(userMerchantIdStr, out var userMerchantId) || userMerchantId != existingOrder.MerchantId)
+        {
+            return Failed<OrderDto>("Access denied. You cannot update fulfillment status for orders belonging to another merchant.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
         var order = await _orderService.UpdateOrderStatusAsync(id, request.Status, ct);
         return Success(order, "Order status updated successfully.");
     }

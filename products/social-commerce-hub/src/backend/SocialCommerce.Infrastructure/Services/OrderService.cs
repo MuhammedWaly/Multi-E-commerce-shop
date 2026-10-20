@@ -228,6 +228,19 @@ public class OrderService : IOrderService
         return MapToDto(order);
     }
 
+    public async Task<IReadOnlyList<OrderDto>> GetCustomerOrdersAsync(string customerEmail, CancellationToken ct = default)
+    {
+        var normalizedEmail = customerEmail.Trim().ToLowerInvariant();
+        var orders = await _db.Orders
+            .Include(o => o.Items)
+            .AsNoTracking()
+            .Where(o => o.CustomerEmail == normalizedEmail)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .ToListAsync(ct);
+
+        return orders.Select(MapToDto).ToList();
+    }
+
     private static OrderDto MapToDto(Order order)
     {
         return new OrderDto(

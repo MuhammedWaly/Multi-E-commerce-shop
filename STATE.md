@@ -4,29 +4,29 @@
 
 | Field                 | Value                                                 |
 |-----------------------|-------------------------------------------------------|
-| **Phase**             | Phase 2 — Full-Stack End-to-End Integration           |
-| **Status**            | COMPLETED — Full-Stack Integration Live & Committed   |
-| **Active Product**    | Social-Commerce-Hub (Marketplace & Seller Portal)     |
-| **Current Task**      | Frontend-Backend Real Data Integration                |
+| **Phase**             | Phase 2 — Multi-Tenant RBAC & Triple-Portal Architecture |
+| **Status**            | COMPLETED — Buyer, Merchant & Admin Portals Live     |
+| **Active Product**    | Social-Commerce-Hub (Marketplace, Seller, Admin)     |
+| **Current Task**      | 3 Interfaces RBAC + JWT Multi-Tenant Platform Control |
 | **Task Owner**        | Full Engineering Team (under Owner supervision)       |
-| **Pending Approvals** | None (APR-0009 granted by Owner)                      |
-| **Last Completed**    | APR-0009: Full-Stack API Integration & Bug Fixes      |
-| **Next Action**       | Review next sprint priorities with Owner              |
+| **Pending Approvals** | None                                                  |
+| **Last Completed**    | Committed via APR-0010 (RBAC Triple-Portals & JWT)    |
+| **Next Action**       | Consult Owner on next product milestone / roadmap     |
 
 ## Key References
 
 - Governance: [README.md](README.md)
 - Approvals: [docs/approvals/approval-log.json](docs/approvals/approval-log.json)
-- API Client: `products/social-commerce-hub/src/frontend/src/services/api.ts`
+- Admin Portal: `products/social-commerce-hub/src/frontend/src/components/AdminPortal.tsx`
+- Buyer Orders: `products/social-commerce-hub/src/frontend/src/components/BuyerOrdersModal.tsx`
 - Backend Solution: `products/social-commerce-hub/src/backend/SocialCommerce.slnx`
-- Frontend Web App: `products/social-commerce-hub/src/frontend/`
 
 ## Environment Notes
 
-- Backend: .NET 10 LTS (`10.0.401`) on `http://localhost:5271` — 30 tests green
-- Frontend: React 19 / Vite 8 on `http://localhost:5173` with `/api` proxy
-- Database: EF Core SQLite (`social_commerce.db`) live & seeded
-- Git: Branch `main` up to date with APR-0009
+- Backend: .NET 10 LTS on `http://localhost:5271` — 34/34 tests green
+- Security: PBKDF2 Hashing + JWT Bearer + RBAC Claims (Buyer, Merchant, Admin)
+- Multi-Tenancy: Cross-tenant 403 Forbidden; Admin platform governance live
+- Frontend: React 19 / Vite 8 on `http://localhost:5173` — 0 TypeScript errors
 
 ## History
 
@@ -38,4 +38,5 @@
 | 2026-10-20 | Web Marketplace & Order Engine    | Committed via APR-0006 (`203fa9c`)    |
 | 2026-10-20 | Merchant Portal & Verified Reviews| Committed via APR-0007 (`cf06bf0`)    |
 | 2026-10-20 | RESTful Controllers & Filters     | Committed via APR-0008 (`27c3221`)    |
-| 2026-10-20 | Full-Stack End-to-End Integration | Committed via APR-0009                |
+| 2026-10-20 | Full-Stack End-to-End Integration | Committed via APR-0009 (`0ca4155`)    |
+| 2026-10-20 | 3 RBAC Interfaces + JWT Security  | Committed via APR-0010                |

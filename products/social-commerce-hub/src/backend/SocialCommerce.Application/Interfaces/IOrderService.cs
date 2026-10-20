@@ -10,5 +10,6 @@ public interface IOrderService
     Task<IReadOnlyList<MerchantLedgerEntryDto>> GetMerchantLedgerAsync(Guid merchantId, CancellationToken ct = default);
     Task<MerchantDashboardDto?> GetMerchantDashboardAsync(Guid merchantId, CancellationToken ct = default);
     Task<IReadOnlyList<OrderDto>> GetMerchantOrdersAsync(Guid merchantId, CancellationToken ct = default);
+    Task<IReadOnlyList<OrderDto>> GetCustomerOrdersAsync(string customerEmail, CancellationToken ct = default);
     Task<OrderDto> UpdateOrderStatusAsync(Guid orderId, string newStatus, CancellationToken ct = default);
 }

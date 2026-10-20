@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SocialCommerce.Application.Common;
 using SocialCommerce.Application.DTOs;
@@ -17,6 +18,20 @@ public class MerchantsController : BaseApiController
         _orderService = orderService;
     }
 
+    private bool IsAuthorizedForMerchant(Guid merchantId)
+    {
+        // Strictly Merchant role only: Only the store owner assigned to this merchantId is authorized
+        if (!User.IsInRole("Merchant")) return false;
+
+        var userMerchantIdStr = User.FindFirst("merchantId")?.Value;
+        if (Guid.TryParse(userMerchantIdStr, out var userMerchantId) && userMerchantId == merchantId)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Registers a new merchant storefront
     /// </summary>
@@ -32,7 +47,7 @@ public class MerchantsController : BaseApiController
     }
 
     /// <summary>
-    /// Retrieves storefront profile and products by slug
+    /// Retrieves storefront profile and products by slug (Public)
     /// </summary>
     [HttpGet("{slug}")]
     [ProducesResponseType(typeof(ApiResponse<MerchantDetailsDto>), StatusCodes.Status200OK)]
@@ -51,43 +66,64 @@ public class MerchantsController : BaseApiController
     }
 
     /// <summary>
-    /// Adds and publishes a new product under the merchant storefront
+    /// Adds and publishes a new product under the merchant storefront (Merchant Store Owner Only)
     /// </summary>
+    [Authorize(Roles = "Merchant")]
     [HttpPost("{merchantId:guid}/products")]
     [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ApiResponse<ProductDto>>> AddProduct(
         Guid merchantId,
         [FromBody] AddProductRequest request,
         CancellationToken ct = default)
     {
+        if (!IsAuthorizedForMerchant(merchantId))
+        {
+            return Failed<ProductDto>("Access denied. Only the store owner can publish products for this storefront.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
         var product = await _catalogService.AddProductAsync(merchantId, request, ct);
         return CreatedSuccess($"/api/products/{product.Id}", product, "Product published successfully to storefront.");
     }
 
     /// <summary>
-    /// Retrieves all customer orders placed for this merchant
+    /// Retrieves all customer orders placed for this merchant (Merchant Store Owner Only)
     /// </summary>
+    [Authorize(Roles = "Merchant")]
     [HttpGet("{merchantId:guid}/orders")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<OrderDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<OrderDto>>>> GetMerchantOrders(
         Guid merchantId,
         CancellationToken ct = default)
     {
+        if (!IsAuthorizedForMerchant(merchantId))
+        {
+            return Failed<IReadOnlyList<OrderDto>>("Access denied. Only the store owner can view customer orders for this storefront.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
         var orders = await _orderService.GetMerchantOrdersAsync(merchantId, ct);
         return Success(orders, "Merchant orders retrieved successfully.");
     }
 
     /// <summary>
-    /// Retrieves aggregate merchant dashboard KPIs, financial totals, and recent orders
+    /// Retrieves aggregate merchant dashboard KPIs, financial totals, and recent orders (Merchant Store Owner Only)
     /// </summary>
+    [Authorize(Roles = "Merchant")]
     [HttpGet("{merchantId:guid}/dashboard")]
     [ProducesResponseType(typeof(ApiResponse<MerchantDashboardDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<MerchantDashboardDto>>> GetMerchantDashboard(
         Guid merchantId,
         CancellationToken ct = default)
     {
+        if (!IsAuthorizedForMerchant(merchantId))
+        {
+            return Failed<MerchantDashboardDto>("Access denied. Only the store owner can access financial analytics for this storefront.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
         var dashboard = await _orderService.GetMerchantDashboardAsync(merchantId, ct);
         if (dashboard == null)
         {
@@ -98,14 +134,21 @@ public class MerchantsController : BaseApiController
     }
 
     /// <summary>
-    /// Retrieves audited financial ledger entries for merchant disbursements and fee deductions
+    /// Retrieves audited financial ledger entries for merchant disbursements and fee deductions (Merchant Store Owner Only)
     /// </summary>
+    [Authorize(Roles = "Merchant")]
     [HttpGet("{merchantId:guid}/ledger")]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<MerchantLedgerEntryDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<MerchantLedgerEntryDto>>>> GetMerchantLedger(
         Guid merchantId,
         CancellationToken ct = default)
     {
+        if (!IsAuthorizedForMerchant(merchantId))
+        {
+            return Failed<IReadOnlyList<MerchantLedgerEntryDto>>("Access denied. You cannot view the financial ledger of another merchant store.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
         var ledger = await _orderService.GetMerchantLedgerAsync(merchantId, ct);
         return Success(ledger, "Merchant financial ledger retrieved successfully.");
     }

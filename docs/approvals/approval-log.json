@@ -98,5 +98,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
+  },
+  {
+    "approval_id": "APR-0010",
+    "timestamp": "2026-10-20T20:35:00+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "COMMIT_AUTHORIZATION",
+    "target_id": "RBAC-TRIPLE-PORTALS-AND-JWT-SECURITY",
+    "scope_description": "Explicit owner authorization to commit the 3 separate RBAC interfaces (Buyer Marketplace & Order History, Merchant Multi-Tenant Seller Hub with exclusive owner control and 403 isolation, Admin Command Center for GMV/5% fees/Store moderation/deletion), PBKDF2 JWT security, and 34 passing xUnit tests.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
   }
 ]

@@ -1,4 +1,7 @@
 import React from 'react';
+import type { UserDto } from '../services/api';
+
+export type PortalType = 'buyer' | 'merchant' | 'admin';
 
 interface HeaderProps {
   cartCount: number;
@@ -9,8 +12,12 @@ interface HeaderProps {
   onSearchChange: (query: string) => void;
   onNavigateHome: () => void;
   onOpenMerchantModal: () => void;
-  isMerchantMode: boolean;
-  onToggleMerchantMode: () => void;
+  activePortal: PortalType;
+  onSelectPortal: (portal: PortalType) => void;
+  currentUser: UserDto | null;
+  onOpenAuthModal: () => void;
+  onOpenBuyerOrders: () => void;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,9 +29,23 @@ export const Header: React.FC<HeaderProps> = ({
   onSearchChange,
   onNavigateHome,
   onOpenMerchantModal,
-  isMerchantMode,
-  onToggleMerchantMode
+  activePortal,
+  onSelectPortal,
+  currentUser,
+  onOpenAuthModal,
+  onOpenBuyerOrders,
+  onLogout
 }) => {
+  const isAdmin = currentUser?.role === 'Admin';
+  const isMerchant = currentUser?.role === 'Merchant';
+
+  const portalLabel = 
+    activePortal === 'admin' 
+      ? 'Admin Center' 
+      : activePortal === 'merchant' 
+      ? 'Seller Portal' 
+      : 'Marketplace';
+
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-xl">
       {/* Top Announcement Bar */}
@@ -33,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>Verified Local Independent Boutiques & Craftsmen across Egypt</span>
           <span className="text-slate-500 hidden sm:inline">•</span>
-          <span className="text-slate-300 hidden sm:inline">100% Platform Buyer Protection & PayPal Guaranteed Settlement</span>
+          <span className="text-slate-300 hidden sm:inline">Role-Based Access Control & JWT Multi-Tenant Shield</span>
         </span>
       </div>
 
@@ -53,17 +74,23 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-black text-2xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
                 SocialHub
               </span>
-              <span className="text-[10px] font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                {isMerchantMode ? 'Seller Portal' : 'Marketplace'}
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
+                activePortal === 'admin'
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                  : activePortal === 'merchant'
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                  : 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+              }`}>
+                {portalLabel}
               </span>
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">Curated Multi-Store E-Commerce</p>
           </div>
         </div>
 
-        {/* Global Smart Search Bar (Desktop Center) */}
-        {!isMerchantMode && (
-          <div className="flex-1 max-w-2xl relative hidden md:block">
+        {/* Global Smart Search Bar (Desktop Center - Visible in Buyer view) */}
+        {activePortal === 'buyer' && (
+          <div className="flex-1 max-w-xl relative hidden md:block">
             <div className="relative flex items-center">
               <span className="absolute left-4 text-slate-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,25 +111,109 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
 
-        {/* Action Controls & Cart */}
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
-          {/* Mode Switcher: Shopper vs Merchant Portal */}
-          <button
-            onClick={onToggleMerchantMode}
-            className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2.5 rounded-xl border transition-all cursor-pointer ${
-              isMerchantMode
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                : 'bg-indigo-600/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-600/30'
-            }`}
-          >
-            <span>{isMerchantMode ? '🛍️ Back to Shopper' : '🏪 Merchant Portal'}</span>
-          </button>
-
-          {/* Become a Seller CTA */}
-          {!isMerchantMode && (
+        {/* Portal Switching Bar for Admin & Merchants */}
+        <div className="flex items-center gap-2">
+          {isAdmin ? (
+            <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
+              <button
+                onClick={() => onSelectPortal('buyer')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activePortal === 'buyer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🛍️ Marketplace
+              </button>
+              <button
+                onClick={() => onSelectPortal('admin')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activePortal === 'admin' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🛡️ Admin Center
+              </button>
+            </div>
+          ) : isMerchant ? (
+            <div className="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
+              <button
+                onClick={() => onSelectPortal('buyer')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activePortal === 'buyer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🛍️ Shopper Feed
+              </button>
+              <button
+                onClick={() => onSelectPortal('merchant')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activePortal === 'merchant' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🏪 My Store Dashboard
+              </button>
+            </div>
+          ) : (
             <button
               onClick={onOpenMerchantModal}
-              className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3.5 py-2.5 rounded-xl transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl border bg-indigo-600/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-600/30 transition-all cursor-pointer"
+            >
+              <span>+ Open Store</span>
+            </button>
+          )}
+
+          {/* Buyer My Orders Trigger (Visible when authenticated) */}
+          {currentUser && (
+            <button
+              onClick={onOpenBuyerOrders}
+              title="My Orders & Tracking"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 px-3 py-2 rounded-xl transition-all cursor-pointer"
+            >
+              <span>📦</span>
+              <span>My Orders</span>
+            </button>
+          )}
+
+          {/* User Auth Pill / Login Button */}
+          {currentUser ? (
+            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shadow-md ${
+                isAdmin 
+                  ? 'bg-gradient-to-tr from-rose-500 to-red-600' 
+                  : isMerchant 
+                  ? 'bg-gradient-to-tr from-purple-500 to-indigo-600'
+                  : 'bg-gradient-to-tr from-emerald-500 to-teal-600'
+              }`}>
+                {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="hidden sm:block text-left text-xs">
+                <p className="font-bold text-white leading-tight truncate max-w-[90px]">{currentUser.fullName}</p>
+                <span className={`text-[10px] font-semibold ${
+                  isAdmin ? 'text-rose-400' : isMerchant ? 'text-purple-400' : 'text-emerald-400'
+                }`}>
+                  {currentUser.role}
+                </span>
+              </div>
+              <button
+                onClick={onLogout}
+                title="Log Out"
+                className="text-slate-400 hover:text-red-400 text-xs font-bold ml-1 transition-colors cursor-pointer"
+              >
+                ⎋
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenAuthModal}
+              className="flex items-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+            >
+              <span>👤 Sign In</span>
+            </button>
+          )}
+
+          {/* Become a Seller CTA (When not a merchant) */}
+          {activePortal === 'buyer' && !isMerchant && !isAdmin && (
+            <button
+              onClick={onOpenMerchantModal}
+              className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl transition-colors cursor-pointer"
             >
               <span>+ Open Store</span>
             </button>
@@ -111,14 +222,14 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Cart Slide-Over Trigger */}
           <button
             onClick={onOpenCart}
-            className="relative bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2.5 cursor-pointer"
+            className="relative bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
             <span className="hidden sm:inline">Cart</span>
             {cartCount > 0 && (
-              <span className="bg-amber-400 text-slate-950 font-black text-xs px-2 py-0.5 rounded-full shadow-md">
+              <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-1.5 py-0.5 rounded-full shadow-md">
                 {cartCount}
               </span>
             )}
@@ -127,8 +238,8 @@ export const Header: React.FC<HeaderProps> = ({
 
       </div>
 
-      {/* Secondary Category Subheader (Shopper View Only) */}
-      {!isMerchantMode && (
+      {/* Secondary Category Subheader (Buyer View Only) */}
+      {activePortal === 'buyer' && (
         <div className="border-t border-slate-800/80 bg-slate-950/70">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 overflow-x-auto py-2 no-scrollbar text-sm">
             {[
