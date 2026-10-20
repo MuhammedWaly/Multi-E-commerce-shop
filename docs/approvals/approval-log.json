@@ -54,5 +54,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary. Agents have filesystem write access."
+  },
+  {
+    "approval_id": "APR-0006",
+    "timestamp": "2026-10-20T15:57:45+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "COMMIT_AUTHORIZATION",
+    "target_id": "TASK-0004",
+    "scope_description": "Explicit owner authorization to commit the full-stack sprint deliverables into Git branch 'main': Desktop Web Marketplace redesign (Header, Hero, Featured Stores, Filters, 3-column Grid, Storefront Page, Cart Slide-Over), EF Core SQLite persistence, Order lifecycle, Merchant ledger, and 18 passing xUnit unit tests.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
   }
 ]
