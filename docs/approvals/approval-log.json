@@ -87,5 +87,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
+  },
+  {
+    "approval_id": "APR-0009",
+    "timestamp": "2026-10-20T19:12:12+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "COMMIT_AUTHORIZATION",
+    "target_id": "FULL-STACK-API-INTEGRATION",
+    "scope_description": "Explicit owner authorization to commit the full-stack end-to-end integration: centralized API client layer, Vite reverse proxy, live data wiring for catalog feed, express checkout, merchant portal KPIs & orders, verified reviews, and defensive nullish formatting.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
   }
 ]

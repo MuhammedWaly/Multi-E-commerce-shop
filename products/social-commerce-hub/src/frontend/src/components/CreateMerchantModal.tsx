@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { api } from '../services/api';
 
 interface CreateMerchantModalProps {
   isOpen: boolean;
@@ -31,31 +32,31 @@ export const CreateMerchantModal: React.FC<CreateMerchantModalProps> = ({
     setErrorMsg(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/merchants', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeName, slug, email })
+      const created = await api.createMerchant({
+        storeName,
+        slug,
+        email: email || `${slug}@example.com`
       });
 
-      if (res.ok) {
-        const created = await res.json();
-        setSuccessMsg(`Congratulations! Store "${storeName}" registered successfully.`);
-        onMerchantCreated(created);
-        setTimeout(() => {
-          setSuccessMsg(null);
-          onClose();
-        }, 1500);
-      } else {
-        const err = await res.json();
-        setErrorMsg(err.error || 'Failed to register store.');
-      }
-    } catch {
-      // Local fallback success
-      setSuccessMsg(`Store "${storeName}" created in demo mode.`);
+      setSuccessMsg(`Congratulations! Store "${storeName}" registered successfully.`);
+      onMerchantCreated(created);
       setTimeout(() => {
         setSuccessMsg(null);
         onClose();
       }, 1500);
+    } catch (err: any) {
+      console.warn('Backend store registration fallback:', err);
+      // If error from backend validation, display it; else fallback
+      if (err.message && !err.message.includes('Failed to fetch')) {
+        setErrorMsg(err.message);
+      } else {
+        // Offline / demo fallback
+        setSuccessMsg(`Store "${storeName}" created in demo mode.`);
+        setTimeout(() => {
+          setSuccessMsg(null);
+          onClose();
+        }, 1500);
+      }
     } finally {
       setIsSubmitting(false);
     }

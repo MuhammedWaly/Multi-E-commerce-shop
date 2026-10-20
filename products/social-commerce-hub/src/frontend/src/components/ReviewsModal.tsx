@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Product } from '../types';
+import { api } from '../services/api';
 
 interface ReviewItem {
   id: string;
@@ -59,6 +60,27 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen || !product) return;
+    const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product.id);
+    if (isGuid) {
+      api.getReviews(product.id)
+        .then((items) => {
+          if (items && items.length > 0) {
+            setReviews(items.map(r => ({
+              id: r.id,
+              customerName: r.customerName,
+              rating: r.rating,
+              comment: r.comment,
+              isVerifiedPurchase: r.isVerifiedPurchase,
+              date: new Date(r.createdAt).toLocaleDateString()
+            })));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, product]);
+
   if (!isOpen || !product) return null;
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -66,19 +88,18 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
     setSubmitting(true);
 
     try {
-      await fetch(`http://localhost:5000/api/products/${product.id}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product.id);
+      if (isGuid) {
+        await api.submitReview(product.id, {
           orderId: crypto.randomUUID(),
           customerName: reviewerName,
           customerEmail: reviewerEmail,
           rating: selectedRating,
           comment: reviewComment
-        })
-      });
-    } catch {
-      // Offline fallback
+        });
+      }
+    } catch (err) {
+      console.warn('Backend review submission fallback:', err);
     }
 
     const newRev: ReviewItem = {

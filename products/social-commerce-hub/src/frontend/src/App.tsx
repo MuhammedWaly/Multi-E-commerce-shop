@@ -11,6 +11,7 @@ import { CartSlideOver } from './components/CartSlideOver';
 import { CreateMerchantModal } from './components/CreateMerchantModal';
 import { Footer } from './components/Footer';
 import { mockMerchants, mockProducts } from './data/mockData';
+import { api } from './services/api';
 import type { Merchant, Product, CartItem } from './types';
 
 export const App: React.FC = () => {
@@ -34,11 +35,10 @@ export const App: React.FC = () => {
 
   // Sync with backend API
   useEffect(() => {
-    fetch('http://localhost:5000/api/feed')
-      .then((res) => (res.ok ? res.json() : null))
+    api.getFeed(1, 50)
       .then((feed) => {
         if (feed && Array.isArray(feed) && feed.length > 0) {
-          const apiProducts: Product[] = feed.map((item: any, idx: number) => ({
+          const apiProducts: Product[] = feed.map((item, idx) => ({
             id: item.id,
             merchantId: item.merchantId,
             storeName: item.storeName,
@@ -47,17 +47,25 @@ export const App: React.FC = () => {
             price: item.price,
             originalPrice: item.price > 500 ? Math.round(item.price * 1.2) : undefined,
             mediaUrl: item.mediaUrl,
-            category: idx % 2 === 0 ? 'fashion' : 'leather',
+            category: (item.title.toLowerCase().includes('bag') || item.title.toLowerCase().includes('cardholder') || item.title.toLowerCase().includes('leather')) ? 'leather' : 'fashion',
             rating: item.rating || 4.9,
             reviewCount: 25 + idx * 7,
             stockQuantity: item.stockQuantity,
             isFeatured: idx < 2
           }));
           setProducts(apiProducts);
+
+          // Sync merchants with real database GUIDs
+          setMerchants((prev) =>
+            prev.map((m) => {
+              const match = feed.find((f) => f.storeSlug === m.slug);
+              return match ? { ...m, id: match.merchantId } : m;
+            })
+          );
         }
       })
-      .catch(() => {
-        // Mock fallback active
+      .catch((err) => {
+        console.warn('Backend feed unavailable, using local mock cache:', err);
       });
   }, []);
 

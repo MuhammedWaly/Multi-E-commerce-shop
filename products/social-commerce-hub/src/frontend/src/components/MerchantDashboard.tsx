@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Merchant, Product } from '../types';
+import { api } from '../services/api';
 
 interface MerchantDashboardProps {
   merchants: Merchant[];
@@ -28,6 +29,13 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   // Orders state
   const currentMerchant = merchants.find(m => m.id === selectedMerchantId) || merchants[0];
   const merchantProducts = products.filter(p => p.merchantId === currentMerchant.id);
+
+  const [metrics, setMetrics] = useState({
+    availableBalance: 14250,
+    grossSales: 15000,
+    totalOrders: 3,
+    platformFees: 750
+  });
 
   const [orders, setOrders] = useState([
     {
@@ -65,15 +73,74 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
     }
   ]);
 
+  const [ledgerEntries, setLedgerEntries] = useState([
+    { type: 'CreditSale', amount: '+1,250 EGP', desc: 'Gross customer payment for Order #ORD-849201', date: '2026-10-20' },
+    { type: 'FeeDeduction', amount: '-62.5 EGP', desc: 'Platform operational fee (5%) for Order #ORD-849201', date: '2026-10-20' },
+    { type: 'CreditSale', amount: '+650 EGP', desc: 'Gross customer payment for Order #ORD-849188', date: '2026-10-19' },
+    { type: 'FeeDeduction', amount: '-32.5 EGP', desc: 'Platform operational fee (5%) for Order #ORD-849188', date: '2026-10-19' },
+    { type: 'Payout', amount: '-8,500 EGP', desc: 'Disbursement to Commercial International Bank (CIB) Egypt', date: '2026-10-15' }
+  ]);
+
+  useEffect(() => {
+    const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentMerchant.id);
+    if (!isGuid) return;
+
+    // Fetch dashboard KPIs
+    api.getMerchantDashboard(currentMerchant.id)
+      .then((dash) => {
+        if (dash) {
+          setMetrics({
+            availableBalance: dash.totalNetEarnings ?? dash.balance ?? 0,
+            grossSales: dash.totalGrossSales ?? 0,
+            totalOrders: dash.totalOrdersCount ?? 0,
+            platformFees: dash.totalPlatformFees ?? 0
+          });
+        }
+      })
+      .catch(() => {});
+
+    // Fetch orders
+    api.getMerchantOrders(currentMerchant.id)
+      .then((apiOrders) => {
+        if (apiOrders && apiOrders.length > 0) {
+          setOrders(apiOrders.map(o => ({
+            id: o.id,
+            customerName: o.customerName,
+            customerEmail: o.customerEmail,
+            shippingAddress: o.shippingAddress,
+            totalAmount: o.totalAmount,
+            netAmount: o.merchantNetAmount,
+            status: o.status,
+            createdAt: new Date(o.createdAt).toLocaleString(),
+            items: o.items.map(i => `${i.productTitle} (x${i.quantity})`)
+          })));
+        }
+      })
+      .catch(() => {});
+
+    // Fetch ledger
+    api.getMerchantLedger(currentMerchant.id)
+      .then((ledger) => {
+        if (ledger && ledger.length > 0) {
+          setLedgerEntries(ledger.map(l => ({
+            type: l.type,
+            amount: (l.type === 'DisbursementCredit' ? '+' : '-') + l.amount.toLocaleString() + ' EGP',
+            desc: l.description,
+            date: new Date(l.createdAt).toLocaleDateString()
+          })));
+        }
+      })
+      .catch(() => {});
+  }, [currentMerchant.id]);
+
   const handleMarkFulfilled = async (orderId: string) => {
     try {
-      await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Fulfilled' })
-      });
-    } catch {
-      // Fallback
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
+      if (isGuid) {
+        await api.updateOrderStatus(orderId, 'Fulfilled');
+      }
+    } catch (err) {
+      console.warn('Backend order update fallback:', err);
     }
 
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Fulfilled' } : o));
@@ -100,19 +167,19 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
     };
 
     try {
-      await fetch(`http://localhost:5000/api/merchants/${currentMerchant.id}/products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentMerchant.id);
+      if (isGuid) {
+        const published = await api.addProduct(currentMerchant.id, {
           title: newTitle,
           price: priceNum,
           mediaUrl: product.mediaUrl,
           isVideo: false,
           stockQuantity: stockNum
-        })
-      });
-    } catch {
-      // Fallback
+        });
+        product.id = published.id;
+      }
+    } catch (err) {
+      console.warn('Backend product publish fallback:', err);
     }
 
     onAddProduct(product);
@@ -181,11 +248,11 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
             <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-bold">Ready</span>
           </div>
           <div>
-            <span className="text-3xl font-black text-emerald-400">14,250</span>
+            <span className="text-3xl font-black text-emerald-400">{(metrics.availableBalance ?? 0).toLocaleString()}</span>
             <span className="text-xs font-bold text-emerald-500 ml-1">EGP</span>
           </div>
           <button
-            onClick={() => alert('Payout Request: 14,250 EGP scheduled for disbursement to your Egyptian bank account via ledger schedule.')}
+            onClick={() => alert(`Payout Request: ${(metrics.availableBalance ?? 0).toLocaleString()} EGP scheduled for disbursement to your Egyptian bank account via ledger schedule.`)}
             className="w-full bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 text-xs font-bold py-2 rounded-xl transition-all cursor-pointer"
           >
             Request Payout →
@@ -196,20 +263,20 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gross Platform Sales</span>
           <div>
-            <span className="text-3xl font-black text-white">15,000</span>
+            <span className="text-3xl font-black text-white">{(metrics.grossSales ?? 0).toLocaleString()}</span>
             <span className="text-xs font-bold text-slate-400 ml-1">EGP</span>
           </div>
-          <p className="text-[11px] text-slate-500">Platform fee rate: 5% (750 EGP)</p>
+          <p className="text-[11px] text-slate-500">Platform fee rate: 5% ({(metrics.platformFees ?? 0).toLocaleString()} EGP)</p>
         </div>
 
         {/* Total Orders */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Customer Orders</span>
           <div>
-            <span className="text-3xl font-black text-indigo-400">{orders.length}</span>
+            <span className="text-3xl font-black text-indigo-400">{metrics.totalOrders ?? orders.length}</span>
             <span className="text-xs text-slate-400 ml-1">orders</span>
           </div>
-          <p className="text-[11px] text-slate-500">1 pending fulfillment</p>
+          <p className="text-[11px] text-slate-500">{orders.filter(o => o.status === 'Paid').length} pending fulfillment</p>
         </div>
 
         {/* Catalog Items */}
@@ -288,8 +355,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                       <p className="text-[11px] text-slate-400">{order.shippingAddress}</p>
                     </td>
                     <td className="p-4 text-slate-400">{order.items.join(', ')}</td>
-                    <td className="p-4 font-bold text-white">{order.totalAmount.toLocaleString()} EGP</td>
-                    <td className="p-4 font-bold text-emerald-400">{order.netAmount.toLocaleString()} EGP</td>
+                    <td className="p-4 font-bold text-white">{(order.totalAmount ?? 0).toLocaleString()} EGP</td>
+                    <td className="p-4 font-bold text-emerald-400">{(order.netAmount ?? 0).toLocaleString()} EGP</td>
                     <td className="p-4">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
                         order.status === 'Fulfilled'
@@ -423,7 +490,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                   />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-xs text-white truncate">{product.title}</h4>
-                    <p className="text-emerald-400 font-extrabold text-xs mt-0.5">{product.price.toLocaleString()} EGP</p>
+                    <p className="text-emerald-400 font-extrabold text-xs mt-0.5">{(product.price ?? 0).toLocaleString()} EGP</p>
                     <p className="text-[11px] text-slate-400">{product.stockQuantity} in stock • ★ {product.rating}</p>
                   </div>
                 </div>
@@ -446,13 +513,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
           </div>
 
           <div className="space-y-3">
-            {[
-              { type: 'CreditSale', amount: '+1,250 EGP', desc: 'Gross customer payment for Order #ORD-849201', date: '2026-10-20' },
-              { type: 'FeeDeduction', amount: '-62.5 EGP', desc: 'Platform operational fee (5%) for Order #ORD-849201', date: '2026-10-20' },
-              { type: 'CreditSale', amount: '+650 EGP', desc: 'Gross customer payment for Order #ORD-849188', date: '2026-10-19' },
-              { type: 'FeeDeduction', amount: '-32.5 EGP', desc: 'Platform operational fee (5%) for Order #ORD-849188', date: '2026-10-19' },
-              { type: 'Payout', amount: '-8,500 EGP', desc: 'Disbursement to Commercial International Bank (CIB) Egypt', date: '2026-10-15' }
-            ].map((entry, idx) => (
+            {ledgerEntries.map((entry, idx) => (
               <div
                 key={idx}
                 className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 flex justify-between items-center text-xs"
@@ -460,7 +521,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      entry.type === 'CreditSale' ? 'bg-emerald-500/20 text-emerald-300' :
+                      entry.type === 'CreditSale' || entry.type === 'DisbursementCredit' ? 'bg-emerald-500/20 text-emerald-300' :
                       entry.type === 'FeeDeduction' ? 'bg-purple-500/20 text-purple-300' :
                       'bg-amber-500/20 text-amber-300'
                     }`}>

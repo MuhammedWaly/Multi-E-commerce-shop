@@ -16,3 +16,11 @@ Desktop.ini
 # Build outputs (future use)
 bin/
 obj/
+node_modules/
+dist/
+
+# SQLite Databases
+*.db
+*.db-shm
+*.db-wal
+
