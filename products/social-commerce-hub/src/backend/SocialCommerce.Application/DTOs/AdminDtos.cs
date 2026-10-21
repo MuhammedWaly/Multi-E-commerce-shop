@@ -44,7 +44,10 @@ public record AdminOrderDto(
     decimal PlatformFeeAmount,
     decimal MerchantNetAmount,
     string Status,
-    DateTime CreatedAtUtc
+    DateTime CreatedAtUtc,
+    string PaymentMethod = "PayPal",
+    string? PaymentReference = null,
+    string? SettlementStatus = null
 );
 
 public record UpdateMerchantStatusRequest(

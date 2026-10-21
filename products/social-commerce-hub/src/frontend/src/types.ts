@@ -34,3 +34,21 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export type PaymentChannel = 'CashOnDelivery' | 'Fawry' | 'InstaPay' | 'PayPal';
+
+export type SettlementStatus = 
+  | 'PendingPayment'
+  | 'PendingCollection'
+  | 'PendingVerification'
+  | 'Settled'
+  | 'AwaitingPayment';
+
+export interface PaymentDetails {
+  channel: PaymentChannel;
+  fawryReferenceNumber?: string;
+  fawryExpiryDate?: string;
+  senderMobileOrWallet?: string;
+  senderReferenceNumber?: string;
+  settlementStatus: SettlementStatus | string;
+}

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Product, Merchant } from '../types';
 import { ProductCard } from './ProductCard';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface SearchExplorePageProps {
   initialQuery?: string;
@@ -23,6 +24,8 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
   onOpenReviews,
   onBackToHome
 }) => {
+  const { t, formatNumber, isRTL } = useTranslation();
+
   // Search & Filter State
   const [query, setQuery] = useState(initialQuery);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -184,14 +187,14 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
             onClick={onBackToHome}
             className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 px-3 py-2 rounded-xl border border-slate-800 transition-colors cursor-pointer"
           >
-            <span>←</span>
-            <span>Back to Home</span>
+            <span>{isRTL ? '→' : '←'}</span>
+            <span>{t.searchPage.backToHome}</span>
           </button>
           <div className="h-4 w-px bg-slate-800" />
           <nav className="text-xs text-slate-400 flex items-center gap-1.5">
-            <span className="hover:text-slate-200 cursor-pointer" onClick={onBackToHome}>Home</span>
+            <span className="hover:text-slate-200 cursor-pointer" onClick={onBackToHome}>{t.searchPage.homeBreadcrumb}</span>
             <span>/</span>
-            <span className="text-indigo-400 font-semibold">Search & Catalog</span>
+            <span className="text-indigo-400 font-semibold">{t.searchPage.searchBreadcrumb}</span>
           </nav>
         </div>
 
@@ -202,7 +205,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
             className="inline-flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shadow-sm"
           >
             <span>🔄</span>
-            <span>Reset All Filters & View All Products</span>
+            <span>{t.searchPage.resetAllButton}</span>
           </button>
         )}
       </div>
@@ -211,15 +214,15 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
       <div className="relative rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-slate-800 p-6 sm:p-8 shadow-xl">
         <div className="max-w-3xl space-y-4">
           <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-full inline-block">
-            Comprehensive Marketplace Search
+            {t.searchPage.bannerBadge}
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Explore All Boutique Discoveries & Stores
+            {t.searchPage.bannerTitle}
           </h1>
 
           {/* Search Input Box */}
           <div className="relative flex items-center max-w-2xl">
-            <span className="absolute left-4 text-slate-400">🔍</span>
+            <span className="absolute start-4 text-slate-400">🔍</span>
             <input
               type="text"
               value={query}
@@ -227,8 +230,8 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                 setQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Search products, materials (linen, leather), boutiques, or categories..."
-              className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-100 pl-11 pr-24 py-3 rounded-2xl text-sm transition-all shadow-inner"
+              placeholder={t.searchPage.inputPlaceholder}
+              className="w-full bg-slate-950/90 border border-slate-700 hover:border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-100 ps-11 pe-24 py-3 rounded-2xl text-sm transition-all shadow-inner"
             />
             {query && (
               <button
@@ -236,9 +239,9 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                   setQuery('');
                   setCurrentPage(1);
                 }}
-                className="absolute right-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl font-bold transition-colors cursor-pointer"
+                className="absolute end-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-xl font-bold transition-colors cursor-pointer"
               >
-                Clear ✕
+                ✕
               </button>
             )}
           </div>
@@ -251,9 +254,9 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <span>🏬</span>
-              <span>Matching Boutiques & Stores ({matchingMerchants.length})</span>
+              <span>{t.searchPage.matchingBoutiquesTitle} ({formatNumber(matchingMerchants.length)})</span>
             </h3>
-            <span className="text-xs text-slate-400">Click to visit storefront</span>
+            <span className="text-xs text-slate-400">{t.searchPage.clickToVisit}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -274,11 +277,11 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                   </h4>
                   <p className="text-[11px] text-slate-400 truncate">{m.tagline}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] text-amber-400 font-bold">★ {m.rating}</span>
+                    <span className="text-[10px] text-amber-400 font-bold">★ {formatNumber(m.rating)}</span>
                     <span className="text-[10px] text-slate-500">• {m.location}</span>
                   </div>
                 </div>
-                <span className="text-xs text-indigo-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                <span className="text-xs text-indigo-400 font-bold group-hover:scale-110 transition-transform">
                   ↗
                 </span>
               </div>
@@ -294,14 +297,14 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <span>⚡</span>
-              <span>Filter Results</span>
+              <span>{t.searchPage.filterResults}</span>
             </h3>
             {isFiltered && (
               <button
                 onClick={handleResetFilters}
                 className="text-xs text-indigo-400 hover:text-indigo-300 font-bold cursor-pointer"
               >
-                Reset
+                {t.filters.reset}
               </button>
             )}
           </div>
@@ -309,15 +312,15 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {/* Category Filter */}
           <div className="space-y-2.5">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Category
+              {t.filters.category}
             </label>
             <div className="space-y-1">
               {[
-                { id: 'all', label: '🔥 All Categories' },
-                { id: 'fashion', label: '👗 Fashion & Apparel' },
-                { id: 'leather', label: '👜 Handcrafted Leather' },
-                { id: 'home', label: '🏺 Ceramics & Home' },
-                { id: 'accessories', label: '✨ Accessories' }
+                { id: 'all', label: t.categories.all },
+                { id: 'fashion', label: t.categories.fashion },
+                { id: 'leather', label: t.categories.leather },
+                { id: 'home', label: t.categories.home },
+                { id: 'accessories', label: t.categories.accessories }
               ].map((cat) => (
                 <button
                   key={cat.id}
@@ -325,10 +328,10 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                     setSelectedCategory(cat.id);
                     setCurrentPage(1);
                   }}
-                  className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-between ${
+                  className={`w-full text-start px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-between ${
                     selectedCategory === cat.id
                       ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-850'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
                   <span>{cat.label}</span>
@@ -341,15 +344,15 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {/* Price Range Filter */}
           <div className="space-y-2.5">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Price Range
+              {t.filters.priceRange}
             </label>
             <div className="space-y-1.5">
               {[
-                { id: 'all', label: 'All Prices' },
-                { id: 'under500', label: 'Under 500 EGP' },
-                { id: '500to1000', label: '500 - 1,000 EGP' },
-                { id: 'over1000', label: 'Over 1,000 EGP' },
-                { id: 'custom', label: 'Custom Price Range' }
+                { id: 'all', label: t.filters.allPrices },
+                { id: 'under500', label: t.filters.under500 },
+                { id: '500to1000', label: t.filters.from500to1000 },
+                { id: 'over1000', label: t.filters.over1000 },
+                { id: 'custom', label: t.filters.customRange }
               ].map((p) => (
                 <label
                   key={p.id}
@@ -373,24 +376,26 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                 <div className="pt-2 flex items-center gap-2">
                   <input
                     type="number"
-                    placeholder="Min"
+                    placeholder={t.filters.minPrice}
                     value={customMinPrice}
                     onChange={(e) => {
                       setCustomMinPrice(e.target.value);
                       setCurrentPage(1);
                     }}
                     className="w-1/2 bg-slate-950 border border-slate-800 text-xs text-white p-2 rounded-xl focus:border-indigo-500 focus:outline-none"
+                    dir="ltr"
                   />
                   <span className="text-slate-500">-</span>
                   <input
                     type="number"
-                    placeholder="Max"
+                    placeholder={t.filters.maxPrice}
                     value={customMaxPrice}
                     onChange={(e) => {
                       setCustomMaxPrice(e.target.value);
                       setCurrentPage(1);
                     }}
                     className="w-1/2 bg-slate-950 border border-slate-800 text-xs text-white p-2 rounded-xl focus:border-indigo-500 focus:outline-none"
+                    dir="ltr"
                   />
                 </div>
               )}
@@ -400,13 +405,13 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {/* Media Format Filter (Videos vs Images) */}
           <div className="space-y-2.5">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Media Format
+              {t.filters.mediaFormat}
             </label>
             <div className="grid grid-cols-3 gap-1.5">
               {[
-                { id: 'all', label: 'All' },
-                { id: 'video', label: '🎬 Reels' },
-                { id: 'image', label: '📷 Photos' }
+                { id: 'all', label: t.filters.mediaAll },
+                { id: 'video', label: t.filters.mediaVideo },
+                { id: 'image', label: t.filters.mediaImage }
               ].map((fmt) => (
                 <button
                   key={fmt.id}
@@ -429,7 +434,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {/* Specific Boutique Store Filter */}
           <div className="space-y-2.5">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Filter by Boutique
+              {t.filters.filterByBoutique}
             </label>
             <select
               value={selectedMerchantSlug}
@@ -439,7 +444,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
               }}
               className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 py-2 px-3 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
-              <option value="all">🏬 All Boutiques & Stores</option>
+              <option value="all">🏬 {t.filters.allBoutiques}</option>
               {merchants.map((m) => (
                 <option key={m.id} value={m.slug}>
                   {m.name}
@@ -460,11 +465,11 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                 }}
                 className="accent-indigo-600 w-4 h-4 rounded"
               />
-              <span>In Stock Only</span>
+              <span>{t.filters.inStockOnly}</span>
             </label>
 
             <div className="space-y-1.5">
-              <span className="text-xs text-slate-400 block">Minimum Rating</span>
+              <span className="text-xs text-slate-400 block">{t.filters.minRating}</span>
               <div className="flex items-center gap-1.5">
                 {[0, 4.0, 4.5, 4.8].map((rat) => (
                   <button
@@ -479,7 +484,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                         : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
                     }`}
                   >
-                    {rat === 0 ? 'All' : `${rat}★`}
+                    {rat === 0 ? t.filters.allRatings : `${formatNumber(rat)}★`}
                   </button>
                 ))}
               </div>
@@ -492,11 +497,15 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {/* Toolbar (Result count, Sort by, Page Size) */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/70 p-4 rounded-2xl border border-slate-800 shadow-md">
             <div className="text-xs text-slate-300">
-              Showing <span className="font-bold text-white">{totalItems === 0 ? 0 : (validCurrentPage - 1) * pageSize + 1} - {Math.min(validCurrentPage * pageSize, totalItems)}</span> of{' '}
-              <span className="font-bold text-indigo-400">{totalItems}</span> matching products
+              <span className="font-bold text-white me-1">
+                {formatNumber(totalItems === 0 ? 0 : (validCurrentPage - 1) * pageSize + 1)} - {formatNumber(Math.min(validCurrentPage * pageSize, totalItems))}
+              </span>
+              <span className="text-slate-400 mx-1">{t.searchPage.pageOf}</span>
+              <span className="font-bold text-indigo-400 me-1">{formatNumber(totalItems)}</span>
+              <span>{t.searchPage.showingMatching}</span>
               {query && (
-                <span className="ml-2 text-slate-400">
-                  for "<strong className="text-white">{query}</strong>"
+                <span className="ms-2 text-slate-400">
+                  {t.searchPage.forQuery} "<strong className="text-white">{query}</strong>"
                 </span>
               )}
             </div>
@@ -504,17 +513,17 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
             <div className="flex items-center gap-3">
               {/* Sort By Dropdown */}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400 whitespace-nowrap">Sort by:</label>
+                <label className="text-xs text-slate-400 whitespace-nowrap">{t.catalog.sortBy}</label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="bg-slate-950 border border-slate-800 text-xs text-slate-200 py-1.5 px-3 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
-                  <option value="relevance">✨ Best Match / Relevance</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="rating">Highest Customer Rating</option>
-                  <option value="newest">Newest Additions</option>
+                  <option value="relevance">{t.catalog.sortFeatured}</option>
+                  <option value="price-low">{t.catalog.sortPriceLow}</option>
+                  <option value="price-high">{t.catalog.sortPriceHigh}</option>
+                  <option value="rating">{t.catalog.sortRating}</option>
+                  <option value="newest">{t.catalog.sortNewest}</option>
                 </select>
               </div>
 
@@ -526,12 +535,12 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                   setCurrentPage(1);
                 }}
                 className="bg-slate-950 border border-slate-800 text-xs text-slate-300 py-1.5 px-2 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
-                title="Items per page"
+                title={t.searchPage.itemsPerPage}
               >
-                <option value={6}>6 / page</option>
-                <option value={9}>9 / page</option>
-                <option value={12}>12 / page</option>
-                <option value={24}>24 / page</option>
+                <option value={6}>{formatNumber(6)} / {t.searchPage.itemsPerPage}</option>
+                <option value={9}>{formatNumber(9)} / {t.searchPage.itemsPerPage}</option>
+                <option value={12}>{formatNumber(12)} / {t.searchPage.itemsPerPage}</option>
+                <option value={24}>{formatNumber(24)} / {t.searchPage.itemsPerPage}</option>
               </select>
             </div>
           </div>
@@ -540,15 +549,15 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {paginatedProducts.length === 0 ? (
             <div className="p-16 text-center bg-slate-900/40 rounded-3xl border border-slate-800 space-y-4">
               <div className="text-5xl">🔍</div>
-              <h4 className="text-xl font-bold text-white">No products found matching your search</h4>
+              <h4 className="text-xl font-bold text-white">{t.searchPage.noProductsTitle}</h4>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                No items matched your current search filters. You can clear your search or reset all filters to view all available products.
+                {t.searchPage.noProductsDesc}
               </p>
               <button
                 onClick={handleResetFilters}
                 className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition-colors cursor-pointer shadow-lg shadow-indigo-600/30"
               >
-                🔄 Show All Products & Reset Filters
+                {t.searchPage.showAllButton}
               </button>
             </div>
           ) : (
@@ -570,21 +579,20 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-800">
               <span className="text-xs text-slate-400">
-                Page <span className="font-bold text-white">{validCurrentPage}</span> of{' '}
-                <span className="font-bold text-white">{totalPages}</span>
+                {t.searchPage.pageOf} <span className="font-bold text-white">{formatNumber(validCurrentPage)}</span> /{' '}
+                <span className="font-bold text-white">{formatNumber(totalPages)}</span>
               </span>
 
               <div className="flex items-center gap-1.5">
                 <button
                   disabled={validCurrentPage <= 1}
                   onClick={() => handlePageChange(validCurrentPage - 1)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-850 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
                 >
-                  ← Previous
+                  {isRTL ? '→' : '←'} {t.searchPage.previous}
                 </button>
 
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => {
-                  // Keep pagination clean if many pages
                   if (
                     pg === 1 ||
                     pg === totalPages ||
@@ -600,7 +608,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                             : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800'
                         }`}
                       >
-                        {pg}
+                        {formatNumber(pg)}
                       </button>
                     );
                   }
@@ -617,9 +625,9 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
                 <button
                   disabled={validCurrentPage >= totalPages}
                   onClick={() => handlePageChange(validCurrentPage + 1)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-850 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all"
                 >
-                  Next →
+                  {t.searchPage.next} {isRTL ? '←' : '→'}
                 </button>
               </div>
             </div>

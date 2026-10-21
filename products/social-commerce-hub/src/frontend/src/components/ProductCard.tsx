@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Product } from '../types';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +17,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onStoreClick,
   onOpenReviews
 }) => {
+  const { t, formatCurrency, formatNumber } = useTranslation();
+
   const discountPercent = product.originalPrice 
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
     : 0;
@@ -36,9 +39,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               loop
               playsInline
             />
-            <span className="absolute top-3 right-16 bg-purple-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
+            <span className="absolute top-3 end-16 bg-purple-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md flex items-center gap-1">
               <span>▶</span>
-              <span>Video</span>
+              <span>{t.product.videoBadge}</span>
             </span>
           </div>
         ) : (
@@ -51,7 +54,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         )}
 
         {/* Floating Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+        <div className="absolute top-3 start-3 flex flex-col gap-1.5">
           {discountPercent > 0 && (
             <span className="bg-red-500 text-white text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-md">
               -{discountPercent}%
@@ -59,7 +62,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
           {product.isFeatured && (
             <span className="bg-indigo-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
-              Featured
+              {t.product.featuredBadge}
             </span>
           )}
         </div>
@@ -67,25 +70,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Star Rating Badge (Clickable to open Verified Reviews) */}
         <button
           onClick={() => onOpenReviews?.(product)}
-          className="absolute top-3 right-3 bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-amber-300 shadow border border-amber-500/20 flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
-          title="View Verified Customer Reviews"
+          className="absolute top-3 end-3 bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-bold text-amber-300 shadow border border-amber-500/20 flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
+          title={t.product.ratingLabel}
         >
           <span>★</span>
-          <span>{product.rating}</span>
-          <span className="text-[10px] text-slate-400">({product.reviewCount})</span>
+          <span>{formatNumber(product.rating)}</span>
+          <span className="text-[10px] text-slate-400">({formatNumber(product.reviewCount)})</span>
         </button>
 
         {/* Merchant Tag */}
         <button
           onClick={() => onStoreClick(product.storeSlug)}
-          className="absolute bottom-3 left-3 bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="absolute bottom-3 start-3 bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <span>🏬</span>
           <span>@{product.storeName}</span>
         </button>
 
-        <div className="absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-300">
-          {product.stockQuantity} in stock
+        <div className="absolute bottom-3 end-3 bg-slate-950/80 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-medium text-slate-300">
+          {product.stockQuantity > 0 ? `${formatNumber(product.stockQuantity)} ${t.product.inStock}` : t.product.soldOut}
         </div>
       </div>
 
@@ -98,11 +101,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           <div className="flex items-baseline gap-2 mt-1">
             <span className="font-black text-lg sm:text-xl text-emerald-400">
-              {(product.price ?? 0).toLocaleString()} <span className="text-xs font-bold text-emerald-500">EGP</span>
+              {formatCurrency(product.price ?? 0)}
             </span>
             {product.originalPrice && (
               <span className="text-xs text-slate-500 line-through">
-                {(product.originalPrice ?? 0).toLocaleString()} EGP
+                {formatCurrency(product.originalPrice)}
               </span>
             )}
           </div>
@@ -114,14 +117,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             onClick={() => onAddToCart(product)}
             className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2.5 px-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <span>+ Cart</span>
+            <span>+ {t.product.addToCart}</span>
           </button>
 
           <button
             onClick={() => onQuickBuy(product)}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold py-2.5 px-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-1 cursor-pointer"
           >
-            <span>⚡ Buy</span>
+            <span>⚡ {t.product.quickBuy}</span>
           </button>
         </div>
       </div>

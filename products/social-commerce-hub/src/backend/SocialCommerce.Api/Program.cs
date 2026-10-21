@@ -8,6 +8,7 @@ using SocialCommerce.Application.Common;
 using SocialCommerce.Application.Interfaces;
 using SocialCommerce.Application.Payments;
 using SocialCommerce.Infrastructure.Payments;
+using SocialCommerce.Infrastructure.Payments.Egyptian;
 using SocialCommerce.Infrastructure.Payments.PayPal;
 using SocialCommerce.Infrastructure.Persistence;
 using SocialCommerce.Infrastructure.Services;
@@ -34,8 +35,20 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 
-// Register Payment Engine
-builder.Services.AddSingleton<IPaymentProvider, PayPalPaymentProvider>();
+// Register Payment Engine & Egyptian Payment Channels
+builder.Services.Configure<PayPalSettings>(builder.Configuration.GetSection(PayPalSettings.SectionName));
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IPaymentProvider>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("PayPal");
+    var settings = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<PayPalSettings>>();
+    var logger = sp.GetService<ILogger<PayPalPaymentProvider>>();
+    return new PayPalPaymentProvider(httpClient, settings, logger);
+});
+builder.Services.AddSingleton<IPaymentProvider, CashOnDeliveryPaymentProvider>();
+builder.Services.AddSingleton<IPaymentProvider, FawryPaymentProvider>();
+builder.Services.AddSingleton<IPaymentProvider, InstaPayPaymentProvider>();
 builder.Services.AddSingleton<IPaymentProviderFactory, PaymentProviderFactory>();
 
 // Configure JWT Authentication & Authorization

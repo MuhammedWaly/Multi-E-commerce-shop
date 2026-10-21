@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Product } from '../types';
 import { ProductCard } from './ProductCard';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface ProductGridProps {
   products: Product[];
@@ -17,6 +18,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   onStoreClick,
   onOpenReviews
 }) => {
+  const { t, formatNumber } = useTranslation();
   const [sortBy, setSortBy] = useState<string>('featured');
 
   const sortedProducts = [...products].sort((a, b) => {
@@ -31,20 +33,22 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       {/* Grid Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
         <div className="text-xs text-slate-300">
-          Showing <span className="font-bold text-white">{sortedProducts.length}</span> curated discoveries
+          {t.common.loading ? null : null}
+          <span className="font-bold text-white me-1">{formatNumber(sortedProducts.length)}</span>
+          {t.catalog.showingText}
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          <label className="text-xs text-slate-400">Sort by:</label>
+          <label className="text-xs text-slate-400">{t.catalog.sortBy}</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
             className="bg-slate-950 border border-slate-800 text-xs text-slate-200 py-1.5 px-3 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
           >
-            <option value="featured">✨ Featured & Trending</option>
-            <option value="price-low">Price: Low to High</option>
-            <option value="price-high">Price: High to Low</option>
-            <option value="rating">Highest Rated</option>
+            <option value="featured">{t.catalog.sortFeatured}</option>
+            <option value="price-low">{t.catalog.sortPriceLow}</option>
+            <option value="price-high">{t.catalog.sortPriceHigh}</option>
+            <option value="rating">{t.catalog.sortRating}</option>
           </select>
         </div>
       </div>
@@ -53,9 +57,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       {sortedProducts.length === 0 ? (
         <div className="p-16 text-center bg-slate-900/50 rounded-3xl border border-slate-800 space-y-3">
           <div className="text-4xl">🔍</div>
-          <h4 className="text-lg font-bold text-white">No items found matching your filters</h4>
+          <h4 className="text-lg font-bold text-white">{t.catalog.noItemsTitle}</h4>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Try adjusting your category, price range, or minimum rating to explore more boutique products.
+            {t.catalog.noItemsDesc}
           </p>
         </div>
       ) : (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api, type OrderDto } from '../services/api';
 import type { Product } from '../types';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface BuyerOrdersModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
   onOpenReviewModal,
   allProducts,
 }) => {
+  const { t, formatCurrency, formatNumber } = useTranslation();
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
           setLoading(false);
         })
         .catch((err) => {
-          setError(err.message || 'Failed to load order history');
+          setError(err.message || t.buyerOrders.loadOrdersFailed);
           setLoading(false);
         });
     }
@@ -70,8 +72,8 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
               📦
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">My Purchase History</h2>
-              <p className="text-xs text-slate-400">Track order shipments and leave verified product reviews</p>
+              <h2 className="text-lg font-bold text-white">{t.buyerOrders.title}</h2>
+              <p className="text-xs text-slate-400">{t.buyerOrders.subtitle}</p>
             </div>
           </div>
           <button
@@ -87,7 +89,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
           {loading && (
             <div className="py-12 text-center text-slate-400 flex flex-col items-center gap-2">
               <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-sm">Fetching your orders...</p>
+              <p className="text-sm">{t.common.loading}</p>
             </div>
           )}
 
@@ -100,8 +102,8 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
           {!loading && !error && orders.length === 0 && (
             <div className="py-12 text-center text-slate-400">
               <div className="text-4xl mb-3">🛍️</div>
-              <h3 className="text-white font-semibold mb-1">No Orders Found</h3>
-              <p className="text-xs text-slate-400">You haven't placed any purchases yet. Explore our curated boutique feed!</p>
+              <h3 className="text-white font-semibold mb-1">{t.buyerOrders.noOrdersTitle}</h3>
+              <p className="text-xs text-slate-400">{t.buyerOrders.noOrdersDesc}</p>
             </div>
           )}
 
@@ -114,7 +116,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/60 pb-3">
                   <div>
-                    <span className="text-[11px] font-mono text-slate-400">Order #{order.id.slice(0, 8)}</span>
+                    <span className="text-[11px] font-mono text-slate-400">{t.buyerOrders.orderNumber} #{order.id.slice(0, 8)}</span>
                     <p className="text-xs text-slate-400">{new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -125,10 +127,10 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
                         ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                         : 'bg-slate-800 text-slate-300'
                     }`}>
-                      {order.status === 'Paid' ? '✓ Paid & Confirmed' : order.status}
+                      {order.status === 'Paid' ? `✓ ${t.buyerOrders.statusPaid}` : order.status}
                     </span>
                     <span className="font-bold text-white text-sm">
-                      {order.totalAmount.toLocaleString()} EGP
+                      {formatCurrency(order.totalAmount)}
                     </span>
                   </div>
                 </div>
@@ -140,16 +142,16 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
                         <span className="text-slate-200 font-medium">{item.productTitle}</span>
-                        <span className="text-slate-500">×{item.quantity}</span>
+                        <span className="text-slate-500">×{formatNumber(item.quantity)}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-slate-300 font-medium">{(item.unitPrice * item.quantity).toLocaleString()} EGP</span>
+                        <span className="text-slate-300 font-medium">{formatCurrency(item.unitPrice * item.quantity)}</span>
                         {isDeliveredOrPaid && (
                           <button
                             onClick={() => handleReviewClick(item.productId, item.productTitle)}
                             className="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-[11px] font-bold border border-indigo-500/30 transition-all cursor-pointer"
                           >
-                            ⭐ Write Review
+                            {t.buyerOrders.leaveReviewBtn}
                           </button>
                         )}
                       </div>
@@ -158,11 +160,27 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
                 </div>
 
                 {/* Shipping & Payment summary */}
-                <div className="pt-2 border-t border-slate-800/40 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Shipping Address: {order.shippingAddress}</span>
-                  {order.paymentOrderId && (
-                    <span className="font-mono text-slate-500">Gateway Ref: {order.paymentOrderId.slice(0, 14)}...</span>
-                  )}
+                <div className="pt-2 border-t border-slate-800/40 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                  <span>{t.buyerOrders.shippingTo} {order.shippingAddress}</span>
+                  <div className="flex items-center gap-2">
+                    {order.paymentMethod && (
+                      <span className="font-semibold text-slate-300">
+                        {order.paymentMethod === 'CashOnDelivery' && `💵 ${t.checkout.codTitle}`}
+                        {order.paymentMethod === 'Fawry' && `🟡 ${t.checkout.fawryTitle}`}
+                        {order.paymentMethod === 'InstaPay' && `⚡ ${t.checkout.instaPayTitle}`}
+                        {order.paymentMethod === 'PayPal' && `💳 ${t.checkout.paypalTitle}`}
+                      </span>
+                    )}
+                    {(order.paymentReference || order.fawryReferenceNumber || order.paymentOrderId) && (
+                      <span className="font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800" dir="ltr">
+                        {order.fawryReferenceNumber
+                          ? `${t.buyerOrders.fawryKioskRef}: ${order.fawryReferenceNumber}`
+                          : order.paymentReference
+                          ? `${t.buyerOrders.refLabel}: ${order.paymentReference}`
+                          : `${t.buyerOrders.refLabel}: ${order.paymentOrderId?.slice(0, 14)}...`}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -175,7 +193,7 @@ export const BuyerOrdersModal: React.FC<BuyerOrdersModalProps> = ({
             onClick={onClose}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold transition-colors"
           >
-            Close
+            {t.common.close}
           </button>
         </div>
       </div>

@@ -120,5 +120,16 @@
     "approver": "Owner",
     "enforcement_mechanism": "chat-based-procedural",
     "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
+  },
+  {
+    "approval_id": "APR-0012",
+    "timestamp": "2026-10-21T17:57:21+03:00",
+    "decision_status": "APPROVED_BY_OWNER",
+    "scope_type": "COMMIT_AUTHORIZATION",
+    "target_id": "EGYPTIAN-PAYMENTS-I18N-AND-PAYPAL-ENGINE",
+    "scope_description": "Explicit owner authorization to commit: 1) Full Arabic (RTL) & English (LTR) bilingual localization across all portals with Cairo typography and logical properties, 2) Multi-channel Egyptian payment gateways (COD, Fawry 8-digit reference billing, InstaPay & Mobile Wallets), 3) Financial double-entry ledger with 5% platform fee and 95% merchant net allocation, 4) Real PayPal REST API v2 engine with live sandbox authentication, 5) 207 green backend tests (100% pass) and 26/26 adversarial verification tests.",
+    "approver": "Owner",
+    "enforcement_mechanism": "chat-based-procedural",
+    "enforcement_limitation": "Procedural safeguard only. File-backed approval records in local JSON are audit records, not an independently enforced technical security boundary."
   }
 ]

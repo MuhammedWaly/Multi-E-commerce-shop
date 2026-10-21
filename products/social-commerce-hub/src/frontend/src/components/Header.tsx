@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, type UserDto, type SearchResponseDto } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export type PortalType = 'buyer' | 'merchant' | 'admin';
 
@@ -42,6 +43,8 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectStore,
   onLogout
 }) => {
+  const { t, language, toggleLanguage, formatCurrency } = useTranslation();
+
   const isAdmin = currentUser?.role === 'Admin';
   const isMerchant = currentUser?.role === 'Merchant';
 
@@ -115,20 +118,20 @@ export const Header: React.FC<HeaderProps> = ({
 
   const portalLabel = 
     activePortal === 'admin' 
-      ? 'Admin Center' 
+      ? t.header.adminCenter 
       : activePortal === 'merchant' 
-      ? 'Seller Portal' 
-      : 'Marketplace';
+      ? t.header.sellerPortal 
+      : t.header.marketplace;
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-xl">
       {/* Top Announcement Bar */}
       <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border-b border-indigo-500/20 py-1.5 px-4 text-center text-xs font-medium text-indigo-300">
         <span className="inline-flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Verified Local Independent Boutiques & Craftsmen across Egypt</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+          <span>{t.header.announcement}</span>
           <span className="text-slate-500 hidden sm:inline">•</span>
-          <span className="text-slate-300 hidden sm:inline">Role-Based Access Control & JWT Multi-Tenant Shield</span>
+          <span className="text-slate-300 hidden sm:inline">{t.header.announcementSub}</span>
         </span>
       </div>
 
@@ -158,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {portalLabel}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Curated Multi-Store E-Commerce</p>
+            <p className="text-[11px] text-slate-400 hidden sm:block">{t.header.brandTagline}</p>
           </div>
         </div>
 
@@ -166,7 +169,7 @@ export const Header: React.FC<HeaderProps> = ({
         {activePortal === 'buyer' && (
           <div ref={searchContainerRef} className="flex-1 max-w-xl relative hidden md:block">
             <div className="relative flex items-center">
-              <span className="absolute left-4 text-slate-400">
+              <span className="absolute start-4 text-slate-400">
                 {isSearching ? (
                   <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
                 ) : (
@@ -181,29 +184,29 @@ export const Header: React.FC<HeaderProps> = ({
                 onFocus={() => searchQuery.trim() && setShowDropdown(true)}
                 onChange={(e) => onSearchChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search boutique apparel, handcrafted leather, ceramics, or stores..."
-                className="w-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-100 pl-11 pr-28 py-2.5 rounded-2xl text-sm transition-all shadow-inner"
+                placeholder={t.header.searchPlaceholder}
+                className="w-full bg-slate-900/90 border border-slate-800 hover:border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-100 ps-11 pe-28 py-2.5 rounded-2xl text-sm transition-all shadow-inner"
               />
               <button
                 type="button"
                 onClick={() => handleExecuteSearch(searchQuery)}
-                className="absolute right-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
-                title="Search or press Enter"
+                className="absolute end-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+                title={t.header.enterKeyHint}
               >
-                <span>Search</span>
-                <span className="text-[10px] opacity-75">↵</span>
+                <span>{t.common.search}</span>
+                <span className="text-[10px] opacity-75">{t.header.enterKeyHint}</span>
               </button>
             </div>
 
             {/* Debounced Search Results Live Dropdown */}
             {showDropdown && debouncedResults && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-[75vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute top-full start-0 end-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-[75vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
                 {/* Nearest Match Banner (Fuzzy Mode) */}
                 {debouncedResults.isFuzzyMatch && debouncedResults.suggestedQuery && (
                   <div className="p-3 bg-indigo-950/70 border-b border-indigo-500/30 text-indigo-300 text-xs flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm">💡</span>
-                      <span>No exact match for <strong className="text-white font-mono">"{debouncedResults.query}"</strong>. Showing closest ranked results:</span>
+                      <span>{t.header.noExactMatch} <strong className="text-white font-mono">"{debouncedResults.query}"</strong>. {t.header.showingClosest}</span>
                     </div>
                     <button
                       onClick={() => {
@@ -223,7 +226,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {debouncedResults.merchants.length > 0 && (
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 block">
-                        🏬 Matching Stores & Boutiques ({debouncedResults.merchants.length})
+                        🏬 {t.header.matchingStores} ({debouncedResults.merchants.length})
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                         {debouncedResults.merchants.map((m) => (
@@ -232,12 +235,12 @@ export const Header: React.FC<HeaderProps> = ({
                             onClick={() => handleStoreClick(m.slugOrUrl.replace('/merchants/', ''))}
                             className="p-2 rounded-xl bg-slate-950/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-indigo-500/40 flex items-center gap-2.5 cursor-pointer transition-all"
                           >
-                            <img src={m.mediaUrl} alt={m.title} className="w-8 h-8 rounded-lg object-cover" />
+                            <img src={m.mediaUrl} alt={m.title} className="w-8 h-8 rounded-lg object-cover shrink-0" />
                             <div className="min-w-0 flex-1">
                               <h4 className="text-xs font-bold text-white truncate">{m.title}</h4>
                               <p className="text-[10px] font-mono text-indigo-400">{m.subtitle}</p>
                             </div>
-                            <span className="text-[10px] text-slate-500">Visit ↗</span>
+                            <span className="text-[10px] text-slate-500 shrink-0">{t.header.visitStore}</span>
                           </div>
                         ))}
                       </div>
@@ -248,7 +251,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {debouncedResults.products.length > 0 && (
                     <div className="space-y-1 pt-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-2 block">
-                        🛍️ Matching Products & Discoveries ({debouncedResults.products.length})
+                        🛍️ {t.header.matchingProducts} ({debouncedResults.products.length})
                       </span>
                       <div className="space-y-1">
                         {debouncedResults.products.map((p) => (
@@ -262,7 +265,7 @@ export const Header: React.FC<HeaderProps> = ({
                                 {p.isVideo ? (
                                   <>
                                     <video src={p.mediaUrl} className="w-full h-full object-cover" muted />
-                                    <span className="absolute bottom-0 right-0 bg-purple-600 text-white text-[8px] px-0.5 rounded">▶</span>
+                                    <span className="absolute bottom-0 end-0 bg-purple-600 text-white text-[8px] px-0.5 rounded">▶</span>
                                   </>
                                 ) : (
                                   <img src={p.mediaUrl} alt={p.title} className="w-full h-full object-cover" />
@@ -274,7 +277,7 @@ export const Header: React.FC<HeaderProps> = ({
                               </div>
                             </div>
                             <span className="text-xs font-bold text-emerald-400 shrink-0">
-                              {p.price?.toLocaleString()} EGP
+                              {formatCurrency(p.price)}
                             </span>
                           </div>
                         ))}
@@ -285,8 +288,8 @@ export const Header: React.FC<HeaderProps> = ({
                   {debouncedResults.merchants.length === 0 && debouncedResults.products.length === 0 && (
                     <div className="py-8 text-center text-slate-400 text-xs">
                       <p className="text-xl mb-1">🔍</p>
-                      <p className="font-semibold text-white">No exact or closest matches</p>
-                      <p className="text-[11px] text-slate-500 mt-1">Try searching for "linen", "leather", or "sari"</p>
+                      <p className="font-semibold text-white">{t.header.noResults}</p>
+                      <p className="text-[11px] text-slate-500 mt-1">{t.header.trySearching}</p>
                     </div>
                   )}
                 </div>
@@ -297,10 +300,10 @@ export const Header: React.FC<HeaderProps> = ({
                   className="p-2.5 bg-slate-950 hover:bg-indigo-950/70 border-t border-slate-800 text-center cursor-pointer transition-colors flex items-center justify-center gap-2 group"
                 >
                   <span className="text-xs font-bold text-indigo-400 group-hover:text-indigo-300">
-                    🔍 View all matching results in dedicated search page
+                    🔍 {t.header.viewAllSearchDropdown}
                   </span>
                   <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-mono group-hover:bg-indigo-900 group-hover:text-white">
-                    ↵ Enter
+                    {t.header.enterKeyHint}
                   </span>
                 </div>
               </div>
@@ -318,7 +321,7 @@ export const Header: React.FC<HeaderProps> = ({
                   activePortal === 'buyer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                🛍️ Marketplace
+                🛍️ {t.header.marketplace}
               </button>
               <button
                 onClick={() => onSelectPortal('admin')}
@@ -326,7 +329,7 @@ export const Header: React.FC<HeaderProps> = ({
                   activePortal === 'admin' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                🛡️ Admin Center
+                🛡️ {t.header.adminCenter}
               </button>
             </div>
           ) : isMerchant ? (
@@ -337,7 +340,7 @@ export const Header: React.FC<HeaderProps> = ({
                   activePortal === 'buyer' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                🛍️ Shopper Feed
+                🛍️ {t.header.shopperFeed}
               </button>
               <button
                 onClick={() => onSelectPortal('merchant')}
@@ -345,7 +348,7 @@ export const Header: React.FC<HeaderProps> = ({
                   activePortal === 'merchant' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                🏪 My Store Dashboard
+                🏪 {t.header.myStoreDashboard}
               </button>
             </div>
           ) : (
@@ -353,7 +356,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenMerchantModal}
               className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl border bg-indigo-600/20 text-indigo-300 border-indigo-500/40 hover:bg-indigo-600/30 transition-all cursor-pointer"
             >
-              <span>+ Open Store</span>
+              <span>{t.header.openStore}</span>
             </button>
           )}
 
@@ -361,23 +364,34 @@ export const Header: React.FC<HeaderProps> = ({
           {currentUser && (
             <button
               onClick={onOpenBuyerOrders}
-              title="My Orders & Tracking"
+              title={t.header.myOrders}
               className="hidden sm:flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 px-3 py-2 rounded-xl transition-all cursor-pointer"
             >
               <span>📦</span>
-              <span>My Orders</span>
+              <span>{t.header.myOrders}</span>
             </button>
           )}
+
+          {/* Language Switcher Pill */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            title={language === 'en' ? 'التحويل إلى العربية' : 'Switch to English'}
+            className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-700 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0"
+          >
+            <span>🌐</span>
+            <span className="font-semibold">{language === 'en' ? 'العربية' : 'English'}</span>
+          </button>
 
           {/* User Auth Pill / Login Button */}
           {currentUser ? (
             <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-2.5 py-1.5 rounded-xl">
               <div
                 onClick={onOpenAccountSettings}
-                title="Account Settings & Security"
+                title={t.header.accountSettingsTooltip}
                 className="flex items-center gap-2 cursor-pointer group hover:opacity-90 transition-opacity"
               >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shadow-md ${
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black text-white shadow-md shrink-0 ${
                   isAdmin 
                     ? 'bg-gradient-to-tr from-rose-500 to-red-600' 
                     : isMerchant 
@@ -386,7 +400,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}>
                   {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : 'U'}
                 </div>
-                <div className="hidden sm:block text-left text-xs">
+                <div className="hidden sm:block text-start text-xs">
                   <p className="font-bold text-white leading-tight truncate max-w-[90px] group-hover:text-indigo-300 transition-colors">
                     {currentUser.fullName}
                   </p>
@@ -402,7 +416,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={onOpenAccountSettings}
-                  title="Account Settings & Security"
+                  title={t.header.accountSettingsTooltip}
                   className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 text-xs transition-colors cursor-pointer"
                 >
                   ⚙️
@@ -411,8 +425,8 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={onLogout}
-                title="Log Out"
-                className="text-slate-400 hover:text-red-400 text-xs font-bold ml-1 transition-colors cursor-pointer"
+                title={t.header.logout}
+                className="text-slate-400 hover:text-red-400 text-xs font-bold ms-1 transition-colors cursor-pointer"
               >
                 ⎋
               </button>
@@ -420,9 +434,9 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <button
               onClick={onOpenAuthModal}
-              className="flex items-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl transition-all cursor-pointer shrink-0"
             >
-              <span>👤 Sign In</span>
+              <span>{t.header.signIn}</span>
             </button>
           )}
 
@@ -430,21 +444,21 @@ export const Header: React.FC<HeaderProps> = ({
           {activePortal === 'buyer' && !isMerchant && !isAdmin && (
             <button
               onClick={onOpenMerchantModal}
-              className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl transition-colors cursor-pointer"
+              className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl transition-colors cursor-pointer shrink-0"
             >
-              <span>+ Open Store</span>
+              <span>{t.header.openStore}</span>
             </button>
           )}
 
           {/* Cart Slide-Over Trigger */}
           <button
             onClick={onOpenCart}
-            className="relative bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
+            className="relative bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold px-3 py-2 rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <span className="hidden sm:inline">Cart</span>
+            <span className="hidden sm:inline">{t.header.cart}</span>
             {cartCount > 0 && (
               <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-1.5 py-0.5 rounded-full shadow-md">
                 {cartCount}
@@ -461,32 +475,32 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mobile Search Bar */}
           <div className="md:hidden px-4 pt-2.5 pb-1">
             <div className="relative flex items-center">
-              <span className="absolute left-3 text-slate-400 text-xs">🔍</span>
+              <span className="absolute start-3 text-slate-400 text-xs">🔍</span>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search products or stores..."
-                className="w-full bg-slate-900 border border-slate-800 text-xs text-white pl-8 pr-16 py-2 rounded-xl focus:border-indigo-500 focus:outline-none"
+                placeholder={t.header.searchMobilePlaceholder}
+                className="w-full bg-slate-900 border border-slate-800 text-xs text-white ps-8 pe-16 py-2 rounded-xl focus:border-indigo-500 focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => handleExecuteSearch(searchQuery)}
-                className="absolute right-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg cursor-pointer"
+                className="absolute end-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg cursor-pointer"
               >
-                Search
+                {t.common.search}
               </button>
             </div>
           </div>
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 overflow-x-auto py-2 no-scrollbar text-sm">
             {[
-              { id: 'all', label: '🔥 All Discoveries' },
-              { id: 'fashion', label: '👗 Fashion & Apparel' },
-              { id: 'leather', label: '👜 Handcrafted Leather' },
-              { id: 'home', label: '🏺 Ceramics & Home' },
-              { id: 'accessories', label: '✨ Accessories' }
+              { id: 'all', label: t.categories.all },
+              { id: 'fashion', label: t.categories.fashion },
+              { id: 'leather', label: t.categories.leather },
+              { id: 'home', label: t.categories.home },
+              { id: 'accessories', label: t.categories.accessories }
             ].map((cat) => (
               <button
                 key={cat.id}

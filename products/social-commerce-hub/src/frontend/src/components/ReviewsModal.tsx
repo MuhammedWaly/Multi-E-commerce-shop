@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Product } from '../types';
 import { api } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface ReviewItem {
   id: string;
@@ -24,6 +25,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
   onClose,
   onReviewAdded
 }) => {
+  const { t, formatNumber } = useTranslation();
   const [reviews, setReviews] = useState<ReviewItem[]>([
     {
       id: 'rev-1',
@@ -140,8 +142,8 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
               </span>
               <h3 className="font-extrabold text-base text-white line-clamp-1">{product.title}</h3>
               <div className="flex items-center gap-2 text-xs mt-0.5">
-                <span className="text-amber-400 font-bold">★ {product.rating}</span>
-                <span className="text-slate-400">({reviews.length} verified reviews)</span>
+                <span className="text-amber-400 font-bold">★ {formatNumber(product.rating)}</span>
+                <span className="text-slate-400">({formatNumber(reviews.length)} {t.reviews.verifiedPurchases})</span>
               </div>
             </div>
           </div>
@@ -156,15 +158,15 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
         {/* Verified Policy Callout */}
         <div className="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl flex items-center gap-2.5 text-xs text-indigo-300">
           <span className="text-base">🛡️</span>
-          <span>Only verified purchasers with completed orders can submit reviews on SocialHub.</span>
+          <span>{t.reviews.title}: {t.reviews.basedOn} {t.reviews.verifiedPurchases}.</span>
         </div>
 
         {/* Existing Reviews List */}
         <div className="space-y-3">
           <h4 className="font-bold text-xs text-slate-300 uppercase tracking-wider">
-            Verified Customer Reviews ({reviews.length})
+            {t.reviews.customerReviewsHeading} ({formatNumber(reviews.length)})
           </h4>
-          <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-56 overflow-y-auto pe-1">
             {reviews.map((rev) => (
               <div
                 key={rev.id}
@@ -175,7 +177,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                     <span className="font-bold text-white">{rev.customerName}</span>
                     {rev.isVerifiedPurchase && (
                       <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                        ✓ Verified Buyer
+                        {t.reviews.verifiedPurchaseBadge}
                       </span>
                     )}
                   </div>
@@ -193,7 +195,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
         {/* Write a Review Section */}
         <div className="border-t border-slate-800 pt-4 space-y-3">
           <h4 className="font-bold text-xs text-slate-200 uppercase tracking-wider">
-            Share Your Experience
+            {t.reviews.writeReviewHeading}
           </h4>
 
           {successMsg ? (
@@ -204,7 +206,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
             <form onSubmit={handleSubmitReview} className="space-y-3">
               {/* Star Rating Picker */}
               <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-400">Your Rating:</span>
+                <span className="text-slate-400">{t.reviews.yourRatingLabel}:</span>
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -219,7 +221,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                     </button>
                   ))}
                 </div>
-                <span className="text-amber-300 font-bold ml-1">{selectedRating}.0 Stars</span>
+                <span className="text-amber-300 font-bold ms-1">{formatNumber(selectedRating)}.0</span>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -228,7 +230,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                   required
                   value={reviewerName}
                   onChange={(e) => setReviewerName(e.target.value)}
-                  placeholder="Your Name"
+                  placeholder={t.reviews.yourNameLabel}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 />
                 <input
@@ -236,8 +238,9 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                   required
                   value={reviewerEmail}
                   onChange={(e) => setReviewerEmail(e.target.value)}
-                  placeholder="Order Email"
+                  placeholder={t.reviews.yourEmailLabel}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  dir="ltr"
                 />
                 <input
                   type="text"
@@ -246,6 +249,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                   onChange={(e) => setOrderId(e.target.value)}
                   placeholder="Order ID"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  dir="ltr"
                 />
               </div>
 
@@ -254,7 +258,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                 rows={2}
                 value={reviewComment}
                 onChange={(e) => setReviewComment(e.target.value)}
-                placeholder="How was the product quality, fit, or craftsmanship?"
+                placeholder={t.reviews.commentPlaceholder}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
               />
 
@@ -263,7 +267,7 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
                 disabled={submitting || !reviewComment.trim()}
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
               >
-                {submitting ? 'Verifying Purchase Order...' : 'Submit Verified Review ⭐'}
+                {submitting ? t.reviews.submittingReview : `${t.reviews.submitReviewBtn} ⭐`}
               </button>
             </form>
           )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, type UserDto, type UserProfileDto } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface AccountSettingsModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
   currentUser,
   onProfileUpdated,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'email'>('profile');
 
   // Profile Form State
@@ -180,8 +182,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs text-slate-300 font-bold transition-colors cursor-pointer"
-          title="Close"
+          className="absolute top-5 end-5 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs text-slate-300 font-bold transition-colors cursor-pointer"
+          title={t.common.close}
         >
           ✕
         </button>
@@ -200,7 +202,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               {fullName || currentUser.fullName}
             </h2>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-slate-400 font-mono truncate">{currentUser.email}</span>
+              <span className="text-xs text-slate-400 font-mono truncate" dir="ltr">{currentUser.email}</span>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                 currentUser.role === 'Admin'
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
@@ -228,7 +230,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>👤 Profile Info</span>
+            <span>👤 {t.accountSettings.tabProfile}</span>
           </button>
 
           <button
@@ -243,7 +245,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>🔑 Change Password</span>
+            <span>🔑 {t.accountSettings.tabPassword}</span>
           </button>
 
           <button
@@ -258,7 +260,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>✉️ Email Verification</span>
+            <span>✉️ {t.accountSettings.tabEmail}</span>
             {isConfirmed ? (
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
             ) : (
@@ -286,7 +288,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
         {isFetching && (
           <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
             <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-            <span>Loading your account details...</span>
+            <span>{t.common.loading}</span>
           </div>
         )}
 
@@ -295,7 +297,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
           <form onSubmit={handleUpdateProfile} className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="account-fullname" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Full Name
+                {t.accountSettings.fullNameLabel}
               </label>
               <input
                 id="account-fullname"
@@ -304,7 +306,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 onChange={(e) => setFullName(e.target.value)}
                 required
                 autoComplete="name"
-                placeholder="Your full name"
+                placeholder={t.accountSettings.fullNamePlaceholder}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors"
               />
             </div>
@@ -312,7 +314,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label htmlFor="account-email" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Email Address
+                  {t.accountSettings.emailLabel}
                 </label>
                 <div className="relative">
                   <input
@@ -321,18 +323,19 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     value={currentUser.email}
                     disabled
                     className="w-full bg-slate-950/50 border border-slate-800/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-400 cursor-not-allowed font-mono"
+                    dir="ltr"
                   />
-                  <span className={`absolute right-3 top-2.5 text-[10px] font-bold ${
+                  <span className={`absolute end-3 top-2.5 text-[10px] font-bold ${
                     isConfirmed ? 'text-emerald-400' : 'text-amber-400'
                   }`}>
-                    {isConfirmed ? '✓ Verified' : '⚠ Unverified'}
+                    {isConfirmed ? t.accountSettings.verifiedStatus : t.accountSettings.unverifiedStatus}
                   </span>
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="account-phone" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Phone Number
+                  {t.accountSettings.phoneLabel}
                 </label>
                 <input
                   id="account-phone"
@@ -341,23 +344,25 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   autoComplete="tel"
-                  placeholder="+20 100 000 0000"
+                  placeholder={t.accountSettings.phonePlaceholder}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors"
+                  dir="ltr"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="account-avatar" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Avatar Image URL (Optional)
+                {t.accountSettings.avatarLabel}
               </label>
               <input
                 id="account-avatar"
                 type="url"
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
+                placeholder={t.accountSettings.avatarPlaceholder}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors font-mono"
+                dir="ltr"
               />
             </div>
 
@@ -370,10 +375,10 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 {isLoading ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Saving Changes...</span>
+                    <span>{t.accountSettings.savingProfile}</span>
                   </>
                 ) : (
-                  <span>💾 Save Profile Changes</span>
+                  <span>{t.accountSettings.saveProfileBtn}</span>
                 )}
               </button>
             </div>
@@ -385,7 +390,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
           <form onSubmit={handleChangePassword} className="space-y-4">
             <div className="space-y-1.5">
               <label htmlFor="current-password" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Current Password
+                {t.accountSettings.currentPasswordLabel}
               </label>
               <input
                 id="current-password"
@@ -395,14 +400,15 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                placeholder="Enter your existing password"
+                placeholder={t.accountSettings.currentPasswordPlaceholder}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors"
+                dir="ltr"
               />
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="new-password" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                New Password (Minimum 6 characters)
+                {t.accountSettings.newPasswordLabel}
               </label>
               <input
                 id="new-password"
@@ -413,14 +419,15 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 required
                 minLength={6}
                 autoComplete="new-password"
-                placeholder="Choose a strong new password"
+                placeholder={t.accountSettings.newPasswordPlaceholder}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors"
+                dir="ltr"
               />
             </div>
 
             <div className="space-y-1.5">
               <label htmlFor="confirm-new-password" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Confirm New Password
+                {t.accountSettings.confirmNewPasswordLabel}
               </label>
               <input
                 id="confirm-new-password"
@@ -431,8 +438,9 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 required
                 minLength={6}
                 autoComplete="new-password"
-                placeholder="Repeat new password"
+                placeholder={t.accountSettings.confirmNewPasswordPlaceholder}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors"
+                dir="ltr"
               />
             </div>
 
@@ -444,7 +452,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                   onChange={(e) => setShowPasswords(e.target.checked)}
                   className="accent-indigo-600 rounded"
                 />
-                <span>Show passwords</span>
+                <span>{t.accountSettings.showPasswords}</span>
               </label>
             </div>
 
@@ -457,10 +465,10 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                 {isLoading ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Updating Password...</span>
+                    <span>{t.accountSettings.updatingPassword}</span>
                   </>
                 ) : (
-                  <span>🔒 Update Password</span>
+                  <span>{t.accountSettings.updatePasswordBtn}</span>
                 )}
               </button>
             </div>
@@ -474,12 +482,12 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               <span className="text-2xl">{isConfirmed ? '🛡️' : '⏳'}</span>
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-white">
-                  {isConfirmed ? 'Email Address Verified' : 'Email Verification Pending'}
+                  {isConfirmed ? t.accountSettings.verifiedStatus : t.accountSettings.unverifiedStatus}
                 </h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {isConfirmed
-                    ? `Your account (${currentUser.email}) is confirmed and protected.`
-                    : `Please confirm your email (${currentUser.email}) to secure your account and receive order receipts.`}
+                    ? t.accountSettings.verifiedNotice
+                    : t.accountSettings.unverifiedNotice}
                 </p>
               </div>
             </div>
@@ -488,15 +496,16 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               <form onSubmit={handleConfirmEmail} className="space-y-4">
                 <div className="space-y-1.5">
                   <label htmlFor="verify-token-input" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Verification Code / Token
+                    {t.accountSettings.tokenLabel}
                   </label>
                   <input
                     id="verify-token-input"
                     type="text"
                     value={verifyToken}
                     onChange={(e) => setVerifyToken(e.target.value)}
-                    placeholder="Paste the verification token received in email..."
+                    placeholder={t.accountSettings.tokenPlaceholder}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-indigo-500 focus:outline-none transition-colors font-mono"
+                    dir="ltr"
                   />
                 </div>
 
@@ -506,7 +515,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     disabled={isLoading}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 rounded-xl shadow-md transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    {isLoading ? 'Verifying...' : '✓ Confirm Email Token'}
+                    {isLoading ? t.common.loading : t.accountSettings.confirmTokenBtn}
                   </button>
 
                   <button
@@ -515,14 +524,13 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
                     disabled={isLoading}
                     className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2.5 rounded-xl border border-slate-700 transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    ✉️ Resend Verification Token
+                    {t.accountSettings.resendTokenBtn}
                   </button>
                 </div>
               </form>
             ) : (
               <div className="text-center py-4 text-xs text-slate-400 space-y-2">
-                <p className="text-emerald-400 font-bold">✓ All Set!</p>
-                <p>No further email actions required for this account.</p>
+                <p className="text-emerald-400 font-bold">{t.accountSettings.allSetMessage}</p>
               </div>
             )}
           </div>

@@ -71,6 +71,12 @@ public class SocialCommerceDbContext : DbContext
             b.Property(o => o.MerchantNetAmount).HasPrecision(18, 2);
             b.Property(o => o.PlatformFeeRate).HasPrecision(5, 4);
 
+            b.Property(o => o.PaymentMethod).HasMaxLength(50);
+            b.Property(o => o.PaymentReference).HasMaxLength(100);
+            b.Property(o => o.PaymentInstructions).HasMaxLength(1000);
+            b.Property(o => o.PaymentExpiresAtUtc);
+            b.Property(o => o.SenderWalletOrReference).HasMaxLength(100);
+
             b.HasMany(o => o.Items)
              .WithOne()
              .HasForeignKey(i => i.OrderId)
@@ -79,6 +85,7 @@ public class SocialCommerceDbContext : DbContext
             b.Navigation(o => o.Items).UsePropertyAccessMode(PropertyAccessMode.Field);
             b.HasIndex(o => o.MerchantId);
             b.HasIndex(o => o.PaymentOrderId);
+            b.HasIndex(o => o.PaymentReference);
         });
 
         // OrderItem Configuration

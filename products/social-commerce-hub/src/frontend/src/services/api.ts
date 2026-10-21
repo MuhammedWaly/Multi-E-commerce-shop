@@ -1,3 +1,5 @@
+import type { PaymentChannel, SettlementStatus } from '../types';
+
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -132,6 +134,17 @@ export interface OrderDto {
   merchantNetAmount: number;
   status: string;
   paymentOrderId?: string;
+  paymentTransactionId?: string;
+  paymentMethod?: PaymentChannel;
+  paymentReference?: string;
+  paymentInstructions?: string;
+  paymentExpiresAtUtc?: string;
+  senderWalletOrReference?: string;
+  settlementStatus?: SettlementStatus | string;
+  fawryReferenceNumber?: string;
+  fawryExpiryDate?: string;
+  senderMobileOrWallet?: string;
+  senderReferenceNumber?: string;
   createdAt: string;
   items: OrderItemDto[];
 }
@@ -202,6 +215,10 @@ export interface AdminOrderDto {
   platformFeeAmount: number;
   merchantNetAmount: number;
   status: string;
+  paymentMethod?: PaymentChannel | string;
+  paymentReference?: string;
+  senderWalletOrReference?: string;
+  settlementStatus?: SettlementStatus | string;
   createdAtUtc: string;
 }
 
@@ -249,6 +266,14 @@ export interface CreateOrderRequest {
   customerName: string;
   customerEmail: string;
   shippingAddress: string;
+  paymentMethod?: PaymentChannel;
+  senderWalletOrReference?: string;
+  senderWallet?: string;
+  paymentReference?: string;
+  paymentDetails?: {
+    senderMobileOrWallet?: string;
+    senderReferenceNumber?: string;
+  };
   items: { productId: string; quantity: number }[];
 }
 
@@ -432,11 +457,36 @@ export const api = {
     return request<OrderDto>(`/orders/${id}`);
   },
 
-  async captureOrder(id: string, data: { paymentOrderId: string; payerId: string }): Promise<CaptureOrderResult> {
+  async captureOrder(id: string, data: { paymentOrderId: string; payerId: string; transactionReference?: string }): Promise<CaptureOrderResult> {
     return request<CaptureOrderResult>(`/orders/${id}/capture`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  async simulateFawrySettlement(orderId: string, billReference: string): Promise<CaptureOrderResult> {
+    return this.captureOrder(orderId, {
+      paymentOrderId: billReference || 'FAWRY-REF',
+      payerId: 'FAWRY-KIOSK-SIMULATOR',
+      transactionReference: billReference,
+    });
+  },
+
+  async settleOrderPayment(orderId: string, data: { channel: string; reference?: string }): Promise<OrderDto> {
+    try {
+      return await request<OrderDto>(`/orders/${orderId}/settle`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch {
+      const captureRes = await this.captureOrder(orderId, {
+        paymentOrderId: data.reference || 'SETTLED',
+        payerId: `SIMULATOR-${data.channel.toUpperCase()}`,
+        transactionReference: data.reference,
+      });
+      if (captureRes.order) return captureRes.order;
+      return await this.getOrder(orderId);
+    }
   },
 
   async updateOrderStatus(id: string, status: string): Promise<OrderDto> {

@@ -15,11 +15,13 @@ import { AuthModal } from './components/AuthModal';
 import { AccountSettingsModal } from './components/AccountSettingsModal';
 import { SearchExplorePage } from './components/SearchExplorePage';
 import { Footer } from './components/Footer';
+import { useTranslation } from './i18n/LanguageContext';
 import { mockMerchants, mockProducts } from './data/mockData';
 import { api, getStoredUser, type UserDto } from './services/api';
 import type { Merchant, Product, CartItem } from './types';
 
 export const App: React.FC = () => {
+  const { t, formatNumber } = useTranslation();
   const [merchants, setMerchants] = useState<Merchant[]>(mockMerchants);
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -326,21 +328,22 @@ export const App: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
                 <div>
                   <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
-                    Curated Catalog
+                    {t.catalog.badge}
                   </span>
                   <h2 className="text-2xl font-black text-white tracking-tight">
-                    Explore All Discoveries
+                    {t.catalog.title}
                   </h2>
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="text-xs text-slate-400">
-                    {filteredProducts.length} items from Egyptian boutiques & makers
+                    <span className="font-bold text-white me-1">{formatNumber(filteredProducts.length)}</span>
+                    {t.catalog.itemCountText}
                   </p>
                   <button
                     onClick={handleOpenSeeAll}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
                   >
-                    <span>See All & Paginate</span>
+                    <span>{t.catalog.seeAllPaginate}</span>
                     <span>↗</span>
                   </button>
                 </div>

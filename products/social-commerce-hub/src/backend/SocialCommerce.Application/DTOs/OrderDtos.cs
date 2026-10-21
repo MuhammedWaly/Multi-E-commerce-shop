@@ -10,8 +10,17 @@ public record CreateOrderRequest(
     string CustomerName,
     string CustomerEmail,
     string ShippingAddress,
-    List<CreateOrderItemRequest> Items
-);
+    List<CreateOrderItemRequest> Items,
+    string? PaymentMethod = "PayPal",
+    string? SenderWallet = null,
+    string? PaymentReference = null,
+    string? SenderWalletOrReference = null
+)
+{
+    public string? EffectiveSenderWallet => !string.IsNullOrWhiteSpace(SenderWalletOrReference)
+        ? SenderWalletOrReference
+        : SenderWallet;
+}
 
 public record OrderItemDto(
     Guid Id,
@@ -36,12 +45,24 @@ public record OrderDto(
     string? PaymentTransactionId,
     DateTime CreatedAtUtc,
     DateTime? PaidAtUtc,
-    IReadOnlyList<OrderItemDto> Items
+    IReadOnlyList<OrderItemDto> Items,
+    string PaymentMethod = "PayPal",
+    string? PaymentReference = null,
+    string? PaymentInstructions = null,
+    DateTime? PaymentExpiresAtUtc = null,
+    string? SenderWalletOrReference = null,
+    string? SettlementStatus = null
 );
 
 public record CaptureOrderRequest(
     string PaymentOrderId,
-    string PayerId
+    string PayerId,
+    string? TransactionReference = null
+);
+
+public record SettleFawryOrderRequest(
+    string? ReferenceNumber = null,
+    string? KioskTerminalId = null
 );
 
 public record CaptureOrderResult(

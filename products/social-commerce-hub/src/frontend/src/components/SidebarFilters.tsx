@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface SidebarFiltersProps {
   activeCategory: string;
@@ -23,37 +24,39 @@ export const SidebarFilters: React.FC<SidebarFiltersProps> = ({
   onInStockToggle,
   onResetFilters
 }) => {
+  const { t } = useTranslation();
+
   return (
     <aside className="w-full lg:w-64 shrink-0 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 space-y-6 self-start shadow-xl">
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
-          <span>⚙️</span> Filters
+          <span>⚙️</span> {t.filters.title}
         </h3>
         <button
           onClick={onResetFilters}
           className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
         >
-          Reset All
+          {t.common.reset}
         </button>
       </div>
 
       {/* Category Filter */}
       <div className="space-y-2.5">
         <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-          Category
+          {t.filters.category}
         </label>
         <div className="space-y-1">
           {[
-            { id: 'all', label: 'All Categories' },
-            { id: 'fashion', label: 'Linen & Fashion' },
-            { id: 'leather', label: 'Handmade Leather' },
-            { id: 'home', label: 'Ceramics & Decor' },
-            { id: 'accessories', label: 'Accessories' }
+            { id: 'all', label: t.categories.all },
+            { id: 'fashion', label: t.categories.fashion },
+            { id: 'leather', label: t.categories.leather },
+            { id: 'home', label: t.categories.home },
+            { id: 'accessories', label: t.categories.accessories }
           ].map((cat) => (
             <button
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
-              className={`w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-colors flex justify-between items-center cursor-pointer ${
+              className={`w-full text-start px-3 py-2 rounded-xl text-xs font-semibold transition-colors flex justify-between items-center cursor-pointer ${
                 activeCategory === cat.id
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -69,14 +72,14 @@ export const SidebarFilters: React.FC<SidebarFiltersProps> = ({
       {/* Price Range Filter */}
       <div className="space-y-2.5 border-t border-slate-800 pt-4">
         <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-          Price Range (EGP)
+          {t.filters.priceRange}
         </label>
         <div className="space-y-1.5 text-xs text-slate-300">
           {[
-            { id: 'all', label: 'Any Price' },
-            { id: 'under500', label: 'Under 500 EGP' },
-            { id: '500to1000', label: '500 to 1,000 EGP' },
-            { id: 'over1000', label: '1,000+ EGP' }
+            { id: 'all', label: t.filters.allPrices },
+            { id: 'under500', label: t.filters.under500 },
+            { id: '500to1000', label: t.filters.from500to1000 },
+            { id: 'over1000', label: t.filters.over1000 }
           ].map((range) => (
             <label
               key={range.id}
@@ -100,7 +103,7 @@ export const SidebarFilters: React.FC<SidebarFiltersProps> = ({
       {/* Minimum Rating Filter */}
       <div className="space-y-2.5 border-t border-slate-800 pt-4">
         <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-          Minimum Rating
+          {t.filters.minRating}
         </label>
         <div className="flex gap-1.5">
           {[0, 4.5, 4.8].map((rating) => (
@@ -113,7 +116,7 @@ export const SidebarFilters: React.FC<SidebarFiltersProps> = ({
                   : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
               }`}
             >
-              {rating === 0 ? 'Any' : `${rating}★`}
+              {rating === 0 ? t.filters.allRatings : `${rating}★`}
             </button>
           ))}
         </div>
@@ -122,7 +125,7 @@ export const SidebarFilters: React.FC<SidebarFiltersProps> = ({
       {/* Availability Toggle */}
       <div className="border-t border-slate-800 pt-4">
         <label className="flex items-center justify-between text-xs text-slate-300 cursor-pointer">
-          <span className="font-medium">In-Stock Only</span>
+          <span className="font-medium">{t.filters.inStockOnly}</span>
           <input
             type="checkbox"
             checked={inStockOnly}
@@ -134,8 +137,8 @@ export const SidebarFilters: React.FC<SidebarFiltersProps> = ({
 
       {/* Trust Badge Card */}
       <div className="p-3.5 bg-slate-950/60 rounded-2xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-        <p className="font-bold text-indigo-300">🛡️ SocialHub Guarantee</p>
-        <p>All independent orders are covered by platform buyer protection and verified PayPal checkout.</p>
+        <p className="font-bold text-indigo-300">🛡️ {t.header.announcementSub}</p>
+        <p>{t.cart.secureNotice}</p>
       </div>
     </aside>
   );

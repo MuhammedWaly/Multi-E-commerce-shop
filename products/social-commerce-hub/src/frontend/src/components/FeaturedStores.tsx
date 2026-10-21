@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Merchant } from '../types';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface FeaturedStoresProps {
   merchants: Merchant[];
@@ -7,14 +8,20 @@ interface FeaturedStoresProps {
 }
 
 export const FeaturedStores: React.FC<FeaturedStoresProps> = ({ merchants, onSelectMerchant }) => {
+  const { t, formatNumber } = useTranslation();
+
   return (
     <section className="my-10 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
         <div>
-          <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Independent Creators</span>
-          <h2 className="text-2xl font-black text-white tracking-tight">Featured Merchant Storefronts</h2>
+          <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
+            {t.featuredStores.badge}
+          </span>
+          <h2 className="text-2xl font-black text-white tracking-tight">
+            {t.featuredStores.title}
+          </h2>
         </div>
-        <p className="text-xs text-slate-400">Discover dedicated stores and their signature collections</p>
+        <p className="text-xs text-slate-400">{t.featuredStores.description}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -52,7 +59,7 @@ export const FeaturedStores: React.FC<FeaturedStoresProps> = ({ merchants, onSel
                     {merchant.name}
                   </h3>
                   {merchant.verified && (
-                    <span className="text-xs text-blue-400" title="Verified Store">✓</span>
+                    <span className="text-xs text-blue-400" title={t.common.verified}>✓</span>
                   )}
                 </div>
 
@@ -70,14 +77,15 @@ export const FeaturedStores: React.FC<FeaturedStoresProps> = ({ merchants, onSel
                 <div className="flex items-center gap-2 text-xs">
                   <span className="font-bold text-amber-300">★ {merchant.rating}</span>
                   <span className="text-slate-500">•</span>
-                  <span className="text-slate-400">{merchant.productCount} items</span>
+                  <span className="text-slate-400">{formatNumber(merchant.productCount)} {t.common.items}</span>
                 </div>
 
                 <button
                   onClick={() => onSelectMerchant(merchant)}
-                  className="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white font-semibold text-xs px-3.5 py-1.5 rounded-xl border border-indigo-500/30 transition-all cursor-pointer"
+                  className="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white font-semibold text-xs px-3.5 py-1.5 rounded-xl border border-indigo-500/30 transition-all cursor-pointer flex items-center gap-1"
                 >
-                  Visit Store →
+                  <span>{t.featuredStores.exploreStore}</span>
+                  <span className="text-xs">↗</span>
                 </button>
               </div>
             </div>

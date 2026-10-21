@@ -89,6 +89,43 @@ public class OrdersController : BaseApiController
     }
 
     /// <summary>
+    /// Simulates payment settlement for Fawry bill references or kiosk terminals
+    /// </summary>
+    [HttpPost("{id:guid}/fawry/settle")]
+    [ProducesResponseType(typeof(ApiResponse<CaptureOrderResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<CaptureOrderResult>>> SettleFawryOrder(
+        Guid id,
+        [FromBody] SettleFawryOrderRequest? request = null,
+        CancellationToken ct = default)
+    {
+        var order = await _orderService.GetOrderByIdAsync(id, ct);
+        if (order == null)
+        {
+            return Failed<CaptureOrderResult>($"Order with ID '{id}' was not found.", "Order not found.", StatusCodes.Status404NotFound);
+        }
+
+        var billReference = !string.IsNullOrWhiteSpace(request?.ReferenceNumber)
+            ? request.ReferenceNumber
+            : order.PaymentOrderId ?? string.Empty;
+
+        var payerId = !string.IsNullOrWhiteSpace(request?.KioskTerminalId)
+            ? request.KioskTerminalId
+            : "FAWRY-KIOSK-SIMULATOR";
+
+        var captureReq = new CaptureOrderRequest(billReference, payerId, request?.ReferenceNumber);
+        var result = await _orderService.CaptureOrderAsync(id, captureReq, ct);
+
+        if (!result.IsSuccess)
+        {
+            return Failed<CaptureOrderResult>(result.ErrorMessage ?? "Fawry settlement failed.", "Fawry settlement failed.", StatusCodes.Status400BadRequest);
+        }
+
+        return Success(result, "Fawry order settled successfully.");
+    }
+
+    /// <summary>
     /// Updates operational fulfillment status of an order (Protected: merchant tenant isolated)
     /// </summary>
     [Authorize(Roles = "Merchant,Admin")]

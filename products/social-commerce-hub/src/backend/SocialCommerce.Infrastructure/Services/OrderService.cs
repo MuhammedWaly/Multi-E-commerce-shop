@@ -44,20 +44,31 @@ public class OrderService : IOrderService
             orderItems.Add(new OrderItem(product.Id, product.Title, product.Price, itemReq.Quantity));
         }
 
+        // Resolve payment method and gateway provider dynamically
+        var requestedMethod = string.IsNullOrWhiteSpace(request.PaymentMethod) ? "PayPal" : request.PaymentMethod.Trim();
+        var provider = _paymentFactory.GetProvider(requestedMethod);
+
+        var senderRef = request.EffectiveSenderWallet ?? request.PaymentReference;
         var order = new Order(
             request.MerchantId,
             request.CustomerName,
             request.CustomerEmail,
             request.ShippingAddress,
-            orderItems
+            orderItems,
+            0.05m,
+            provider.ProviderName,
+            null,
+            request.PaymentReference,
+            null,
+            null,
+            senderRef
         );
 
         // Call payment provider to initiate payment order
-        var provider = _paymentFactory.GetDefaultProvider();
         var paymentResult = await provider.CreatePaymentOrderAsync(new PaymentOrderRequest(
             order.Id,
             order.TotalAmount,
-            "USD",
+            "EGP",
             "http://localhost:5173/checkout/success",
             "http://localhost:5173/checkout/cancel",
             $"Order {order.Id} at {merchant.StoreName}"
@@ -69,6 +80,28 @@ public class OrderService : IOrderService
         }
 
         order.AssignPaymentOrderId(paymentResult.PaymentOrderId);
+
+        // Apply channel-specific instructions and references
+        if (provider.ProviderName.Equals("Fawry", StringComparison.OrdinalIgnoreCase))
+        {
+            var expiresAt = DateTime.UtcNow.AddHours(48);
+            var instructions = $"Please settle bill reference {paymentResult.PaymentOrderId} at any Fawry retail kiosk, POS terminal, or banking app before {expiresAt:yyyy-MM-dd HH:mm} UTC. / يرجى سداد كود الدفع {paymentResult.PaymentOrderId} لدى أي منفذ فوري أو نقاط البيع أو التطبيق البنكي.";
+            order.SetPaymentDetails(paymentResult.PaymentOrderId, instructions, expiresAt, senderRef);
+        }
+        else if (provider.ProviderName.Equals("InstaPay", StringComparison.OrdinalIgnoreCase))
+        {
+            var instructions = $"Transfer {order.TotalAmount:F2} EGP via InstaPay / Mobile Wallet. Reference: {paymentResult.PaymentOrderId}. Sender: {senderRef ?? "Customer Wallet"}.";
+            order.SetPaymentDetails(paymentResult.PaymentOrderId, instructions, null, senderRef);
+        }
+        else if (provider.ProviderName.Equals("CashOnDelivery", StringComparison.OrdinalIgnoreCase))
+        {
+            var instructions = "Pay cash directly to courier upon delivery.";
+            order.SetPaymentDetails(paymentResult.PaymentOrderId, instructions, null, null);
+        }
+        else
+        {
+            order.SetPaymentDetails(paymentResult.PaymentOrderId, null, null, null);
+        }
 
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(ct);
@@ -98,7 +131,7 @@ public class OrderService : IOrderService
         if (order.PaymentOrderId != request.PaymentOrderId)
             return new CaptureOrderResult(false, string.Empty, "MISMATCH", null, "PaymentOrderId does not match order.");
 
-        var provider = _paymentFactory.GetDefaultProvider();
+        var provider = _paymentFactory.GetProvider(order.PaymentMethod);
         var verifyResult = await provider.VerifyPaymentAsync(new PaymentVerificationRequest(request.PaymentOrderId, request.PayerId), ct);
 
         if (!verifyResult.IsSuccess)
@@ -114,13 +147,13 @@ public class OrderService : IOrderService
         {
             merchant.CreditBalance(order.MerchantNetAmount);
 
-            // Record ledger entries
+            // Record double-entry ledger entries
             var saleEntry = new MerchantLedgerEntry(
                 merchant.Id,
                 order.Id,
                 LedgerEntryType.CreditSale,
                 order.TotalAmount,
-                $"Gross sale for Order #{order.Id}"
+                $"Gross sale for Order #{order.Id} via {order.PaymentMethod}"
             );
             var feeEntry = new MerchantLedgerEntry(
                 merchant.Id,
@@ -243,6 +276,10 @@ public class OrderService : IOrderService
 
     private static OrderDto MapToDto(Order order)
     {
+        var settlementStatus = (order.Status == OrderStatus.Paid || order.Status == OrderStatus.Fulfilled)
+            ? "Settled"
+            : "PendingSettlement";
+
         return new OrderDto(
             order.Id,
             order.MerchantId,
@@ -264,7 +301,13 @@ public class OrderService : IOrderService
                 i.UnitPrice,
                 i.Quantity,
                 i.Subtotal
-            )).ToList()
+            )).ToList(),
+            order.PaymentMethod,
+            order.PaymentReference,
+            order.PaymentInstructions,
+            order.PaymentExpiresAtUtc,
+            order.SenderWalletOrReference,
+            settlementStatus
         );
     }
 }

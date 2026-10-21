@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import type { Merchant, Product } from '../types';
+import type { Merchant, Product, PaymentChannel } from '../types';
 import { api, type UserDto } from '../services/api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface MerchantDashboardProps {
   merchants: Merchant[];
@@ -23,6 +24,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   currentUser,
   onOpenAuthModal
 }) => {
+  const { t, formatCurrency, formatNumber, isRTL } = useTranslation();
+
   // Guard: Only authenticated merchants with role 'Merchant' have access to manage a store dashboard
   if (currentUser?.role !== 'Merchant') {
     return (
@@ -31,21 +34,22 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
           <div className="w-16 h-16 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-purple-500/30">
             🏪
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">Merchant Store Access Restricted</h2>
+          <h2 className="text-2xl font-black text-white mb-2">{t.merchantDashboard.title}</h2>
           <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">
-            Each merchant has exclusive control over their own store. You are currently signed in as{' '}
-            <span className="text-white font-bold">{currentUser?.fullName || 'Guest'}</span>{' '}
-            ({currentUser?.role || 'Guest'}).
             {currentUser?.role === 'Admin'
-              ? ' As an administrator, you manage store suspension and catalog moderation from the Admin Command Center.'
-              : ' To manage products and sales, please sign in with your verified merchant account.'}
+              ? (isRTL 
+                  ? 'بصفتك مسؤول المنصة، يمكنك إدارة المتاجر وحذف المنتجات من مركز التحكم الإداري.'
+                  : 'As an administrator, you manage store suspension and catalog moderation from the Admin Command Center.')
+              : (isRTL
+                  ? 'كل تاجر له خصوصية وإدارة متجره فقط. يرجى تسجيل الدخول بحساب تاجر للتحكم في المنتجات والمبيعات.'
+                  : 'Each merchant has exclusive control over their own store. To manage products and sales, please sign in with your verified merchant account.')}
           </p>
           {currentUser?.role !== 'Admin' && onOpenAuthModal && (
             <button
               onClick={onOpenAuthModal}
               className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-purple-600/30 transition-all cursor-pointer"
             >
-              Sign In as Store Merchant
+              {t.header.signIn}
             </button>
           )}
         </div>
@@ -101,7 +105,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   };
 
   const handleDeleteProduct = async (productId: string, title: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete product "${title}" from your store?`)) {
+    const confirmMsg = t.merchantDashboard.deleteProductConfirm.replace('{title}', title);
+    if (!window.confirm(confirmMsg)) {
       return;
     }
     try {
@@ -116,7 +121,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         handleCancelEdit();
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to delete product.');
+      alert(err.message || t.merchantDashboard.deleteProductFailed);
     }
   };
 
@@ -129,7 +134,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       setNewMediaUrl(result.url);
       setNewIsVideo(result.isVideo);
     } catch (err: any) {
-      setUploadError(err.message || 'Failed to upload media file.');
+      setUploadError(err.message || t.merchantDashboard.uploadMediaFailed);
     } finally {
       setIsUploading(false);
     }
@@ -150,6 +155,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       shippingAddress: '15 Nile Corniche, Zamalek, Cairo',
       totalAmount: 1250,
       netAmount: 1187.5,
+      paymentMethod: 'Fawry' as PaymentChannel,
+      settlementStatus: 'Settled',
       status: 'Paid',
       createdAt: '2026-10-20 14:15',
       items: ['Handmade Genuine Leather Bag (x1)']
@@ -161,7 +168,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       shippingAddress: '8 Degla St, Maadi, Cairo',
       totalAmount: 650,
       netAmount: 617.5,
-      status: 'Fulfilled',
+      paymentMethod: 'CashOnDelivery' as PaymentChannel,
+      settlementStatus: 'PendingCollection',
+      status: 'Pending',
       createdAt: '2026-10-19 18:30',
       items: ['Oversized Linen Shirt - Beige (x1)']
     },
@@ -172,7 +181,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       shippingAddress: '22 El-Horreya Ave, Heliopolis, Cairo',
       totalAmount: 920,
       netAmount: 874,
-      status: 'Fulfilled',
+      paymentMethod: 'InstaPay' as PaymentChannel,
+      settlementStatus: 'PendingVerification',
+      status: 'Pending',
       createdAt: '2026-10-18 11:20',
       items: ['Classic Leather Cardholder (x2), Linen Scarf (x1)']
     }
@@ -215,6 +226,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
             shippingAddress: o.shippingAddress,
             totalAmount: o.totalAmount,
             netAmount: o.merchantNetAmount,
+            paymentMethod: (o.paymentMethod || 'PayPal') as PaymentChannel,
+            settlementStatus: o.settlementStatus || (o.status === 'Paid' || o.status === 'Fulfilled' ? 'Settled' : 'PendingPayment'),
             status: o.status,
             createdAt: new Date(o.createdAt).toLocaleString(),
             items: o.items.map(i => `${i.productTitle} (x${i.quantity})`)
@@ -352,16 +365,14 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         <div className="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
           <div className="flex items-center gap-2 text-amber-300">
             <span className="text-base">🔒</span>
-            <span>
-              Viewing in <strong>Store Preview</strong> mode. To publish products, dispatch customer orders, or disburse payments, sign in as a verified merchant.
-            </span>
+            <span>{t.merchantDashboard.storePreviewModeBanner}</span>
           </div>
           {onOpenAuthModal && (
             <button
               onClick={onOpenAuthModal}
               className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold px-3.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-md"
             >
-              Sign In as Merchant →
+              {t.merchantDashboard.signInAsMerchantAction}
             </button>
           )}
         </div>
@@ -379,7 +390,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
             <div className="flex items-center gap-2">
               <h2 className="text-2xl font-black text-white">{currentMerchant.name}</h2>
               <span className="text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                ● Store Live & Active
+                ● {t.storefront.verifiedBadge}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">{currentMerchant.tagline}</p>
@@ -389,18 +400,15 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         <div className="flex flex-wrap items-center gap-3">
           {/* Verified Store Ownership Badge */}
           <div className="flex items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3.5 py-2 rounded-xl text-xs">
-            <span className="text-indigo-400 font-bold">🔒 Exclusive Store:</span>
+            <span className="text-indigo-400 font-bold">🔒 {t.storefront.independentMaker}:</span>
             <span className="text-white font-extrabold">{currentMerchant.name}</span>
-            <span className="text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-bold">
-              Isolated Tenant
-            </span>
           </div>
 
           <button
             onClick={() => onViewPublicStore(currentMerchant)}
             className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-slate-700 transition-colors cursor-pointer"
           >
-            ↗ View Public Storefront
+            ↗ {t.merchantDashboard.viewStorefront}
           </button>
         </div>
       </div>
@@ -411,49 +419,40 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         {/* Net Balance */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Balance</span>
-            <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-bold">Ready</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.netPayout}</span>
+            <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-bold">✓</span>
           </div>
           <div>
-            <span className="text-3xl font-black text-emerald-400">{(metrics.availableBalance ?? 0).toLocaleString()}</span>
-            <span className="text-xs font-bold text-emerald-500 ml-1">EGP</span>
+            <span className="text-3xl font-black text-emerald-400">{formatCurrency(metrics.availableBalance ?? 0)}</span>
           </div>
-          <button
-            onClick={() => alert(`Payout Request: ${(metrics.availableBalance ?? 0).toLocaleString()} EGP scheduled for disbursement to your Egyptian bank account via ledger schedule.`)}
-            className="w-full bg-emerald-500/20 hover:bg-emerald-500 text-emerald-300 hover:text-slate-950 text-xs font-bold py-2 rounded-xl transition-all cursor-pointer"
-          >
-            Request Payout →
-          </button>
+          <p className="text-[11px] text-slate-500">{t.merchantDashboard.netPayoutDesc}</p>
         </div>
 
         {/* Gross Sales */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gross Platform Sales</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.grossSales}</span>
           <div>
-            <span className="text-3xl font-black text-white">{(metrics.grossSales ?? 0).toLocaleString()}</span>
-            <span className="text-xs font-bold text-slate-400 ml-1">EGP</span>
+            <span className="text-3xl font-black text-white">{formatCurrency(metrics.grossSales ?? 0)}</span>
           </div>
-          <p className="text-[11px] text-slate-500">Platform fee rate: 5% ({(metrics.platformFees ?? 0).toLocaleString()} EGP)</p>
+          <p className="text-[11px] text-slate-500">{t.merchantDashboard.platformFee} (5%): {formatCurrency(metrics.platformFees ?? 0)}</p>
         </div>
 
         {/* Total Orders */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Customer Orders</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.completedOrders}</span>
           <div>
-            <span className="text-3xl font-black text-indigo-400">{metrics.totalOrders ?? orders.length}</span>
-            <span className="text-xs text-slate-400 ml-1">orders</span>
+            <span className="text-3xl font-black text-indigo-400">{formatNumber(metrics.totalOrders ?? orders.length)}</span>
           </div>
-          <p className="text-[11px] text-slate-500">{orders.filter(o => o.status === 'Paid').length} pending fulfillment</p>
+          <p className="text-[11px] text-slate-500">{t.merchantDashboard.completedOrdersDesc}</p>
         </div>
 
         {/* Catalog Items */}
         <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Catalog Items</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.adminPortal.totalListingsMetric}</span>
           <div>
-            <span className="text-3xl font-black text-purple-400">{merchantProducts.length}</span>
-            <span className="text-xs text-slate-400 ml-1">active</span>
+            <span className="text-3xl font-black text-purple-400">{formatNumber(merchantProducts.length)}</span>
           </div>
-          <p className="text-[11px] text-slate-500">Average rating: ★ {currentMerchant.rating}</p>
+          <p className="text-[11px] text-slate-500">{t.product.ratingLabel}: ★ {formatNumber(currentMerchant.rating)}</p>
         </div>
 
       </div>
@@ -468,7 +467,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          📦 Orders & Fulfillment ({orders.length})
+          {t.merchantDashboard.tabsOrders} ({formatNumber(orders.length)})
         </button>
         <button
           onClick={() => setActiveTab('catalog')}
@@ -478,7 +477,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          ✨ Product Catalog & Publishing ({merchantProducts.length})
+          {t.merchantDashboard.tabsProducts} ({formatNumber(merchantProducts.length)})
         </button>
         <button
           onClick={() => setActiveTab('ledger')}
@@ -488,7 +487,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          📊 Financial Ledger & Escrow
+          {t.merchantDashboard.tabsOverview}
         </button>
       </div>
 
@@ -496,53 +495,96 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       {activeTab === 'orders' && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
           <div className="p-5 border-b border-slate-800 flex justify-between items-center">
-            <h3 className="font-extrabold text-sm text-white">Incoming Customer Orders</h3>
-            <span className="text-xs text-slate-400">Real-time PayPal verified orders</span>
+            <h3 className="font-extrabold text-sm text-white">{t.merchantDashboard.ordersTableTitle}</h3>
+            <span className="text-xs text-slate-400">{t.cart.secureNotice}</span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-start text-xs">
               <thead className="bg-slate-950/80 text-slate-400 font-bold border-b border-slate-800">
                 <tr>
-                  <th className="p-4">Order ID</th>
-                  <th className="p-4">Customer</th>
-                  <th className="p-4">Items</th>
-                  <th className="p-4">Gross Total</th>
-                  <th className="p-4">Net Payout</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Fulfillment Action</th>
+                  <th className="p-4">{t.merchantDashboard.orderIdCol}</th>
+                  <th className="p-4">{t.merchantDashboard.customerCol}</th>
+                  <th className="p-4">{t.merchantDashboard.itemsCol}</th>
+                  <th className="p-4">{t.merchantDashboard.totalCol}</th>
+                  <th className="p-4">{t.merchantDashboard.netPayout}</th>
+                  <th className="p-4">{t.merchantDashboard.channelCol}</th>
+                  <th className="p-4">{t.merchantDashboard.settlementCol}</th>
+                  <th className="p-4">{t.merchantDashboard.statusCol}</th>
+                  <th className="p-4 text-end">{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {orders.map(order => (
                   <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-4 font-mono font-bold text-white">{order.id}</td>
+                    <td className="p-4 font-mono font-bold text-white" dir="ltr">{order.id}</td>
                     <td className="p-4">
                       <p className="font-semibold text-white">{order.customerName}</p>
                       <p className="text-[11px] text-slate-400">{order.shippingAddress}</p>
                     </td>
                     <td className="p-4 text-slate-400">{order.items.join(', ')}</td>
-                    <td className="p-4 font-bold text-white">{(order.totalAmount ?? 0).toLocaleString()} EGP</td>
-                    <td className="p-4 font-bold text-emerald-400">{(order.netAmount ?? 0).toLocaleString()} EGP</td>
+                    <td className="p-4 font-bold text-white">{formatCurrency(order.totalAmount ?? 0)}</td>
+                    <td className="p-4 font-bold text-emerald-400">{formatCurrency(order.netAmount ?? 0)}</td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        order.status === 'Fulfilled'
+                      {order.paymentMethod === 'CashOnDelivery' && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                          💵 {t.checkout.codTitle}
+                        </span>
+                      )}
+                      {order.paymentMethod === 'Fawry' && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 whitespace-nowrap">
+                          🟡 {t.checkout.fawryTitle}
+                        </span>
+                      )}
+                      {order.paymentMethod === 'InstaPay' && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
+                          ⚡ {t.checkout.instaPayTitle}
+                        </span>
+                      )}
+                      {(order.paymentMethod === 'PayPal' || !order.paymentMethod) && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">
+                          💳 {t.checkout.paypalTitle}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {order.settlementStatus === 'Settled' ? (
+                        <span className="text-emerald-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                          <span>✓</span> {t.checkout.settled}
+                        </span>
+                      ) : order.settlementStatus === 'PendingCollection' ? (
+                        <span className="text-amber-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                          <span>⏳</span> {t.checkout.pendingCollection}
+                        </span>
+                      ) : order.settlementStatus === 'PendingVerification' ? (
+                        <span className="text-purple-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                          <span>⏳</span> {t.checkout.pendingVerification}
+                        </span>
+                      ) : (
+                        <span className="text-yellow-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                          <span>⏳</span> {t.checkout.awaitingKiosk}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                        order.status === 'Fulfilled' || order.status === 'Paid'
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                           : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                       }`}>
-                        {order.status}
+                        {order.status === 'Paid' ? t.checkout.statusPaid : order.status === 'Fulfilled' ? t.checkout.statusFulfilled : t.checkout.statusPending}
                       </span>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-end">
                       {order.status === 'Paid' ? (
                         <button
                           onClick={() => handleMarkFulfilled(order.id)}
-                          className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-md transition-all cursor-pointer"
+                          className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
                         >
-                          Mark Dispatched ✓
+                          {t.merchantDashboard.markDispatched}
                         </button>
                       ) : (
-                        <span className="text-slate-500 text-[11px]">Completed</span>
+                        <span className="text-slate-500 text-[11px]">{t.merchantDashboard.completed}</span>
                       )}
                     </td>
                   </tr>
@@ -564,10 +606,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
             <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
               <div>
                 <h3 className="font-extrabold text-base text-white">
-                  {editingProductId ? '✏️ Edit Product Details' : 'Publish New Product'}
+                  {editingProductId ? t.merchantDashboard.editProductTitle : t.merchantDashboard.addProductTitle}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  {editingProductId ? 'Update pricing, stock, photos or videos' : 'Will appear instantly on your store and marketplace'}
+                  {editingProductId ? t.merchantDashboard.editProductDesc : t.merchantDashboard.addProductDesc}
                 </p>
               </div>
               {editingProductId && (
@@ -576,65 +618,67 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                   onClick={handleCancelEdit}
                   className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 >
-                  ✕ Cancel
+                  ✕ {t.merchantDashboard.cancelEdit}
                 </button>
               )}
             </div>
 
             {publishSuccess && (
               <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold text-center">
-                ✓ Product {editingProductId ? 'updated' : 'published'} successfully!
+                ✓ {editingProductId ? t.merchantDashboard.productUpdatedSuccess : t.merchantDashboard.productPublishedSuccess}
               </div>
             )}
 
             <form onSubmit={handlePublishProduct} className="space-y-3.5">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Product Title</label>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldTitle}</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Pure Linen Kaftan"
+                  placeholder={t.merchantDashboard.fieldTitlePlaceholder}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Price (EGP)</label>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldPrice}</label>
                   <input
                     type="number"
                     required
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    placeholder="e.g. 850"
+                    placeholder="850"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    dir="ltr"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">Initial Stock</label>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldStock}</label>
                   <input
                     type="number"
                     required
                     value={newStock}
                     onChange={(e) => setNewStock(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    dir="ltr"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">Category</label>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldCategory}</label>
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value as any)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="fashion">Linen & Fashion</option>
-                  <option value="leather">Handcrafted Leather</option>
-                  <option value="home">Ceramics & Home</option>
-                  <option value="accessories">Accessories</option>
+                  <option value="fashion">{t.categories.fashion}</option>
+                  <option value="leather">{t.categories.leather}</option>
+                  <option value="home">{t.categories.home}</option>
+                  <option value="accessories">{t.categories.accessories}</option>
                 </select>
               </div>
 
@@ -642,7 +686,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-slate-300 block">
-                    Product Media (Photos & Videos)
+                    {t.merchantDashboard.fieldMediaUpload}
                   </label>
                   <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
                     <button
@@ -652,7 +696,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                         mediaMode === 'upload' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      📁 Upload
+                      {t.merchantDashboard.uploadPill}
                     </button>
                     <button
                       type="button"
@@ -661,7 +705,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                         mediaMode === 'url' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      🔗 Link URL
+                      {t.merchantDashboard.linkUrlPill}
                     </button>
                   </div>
                 </div>
@@ -690,8 +734,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                               muted
                               playsInline
                             />
-                            <span className="absolute top-2 left-2 bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
-                              🎥 Video Reel Ready
+                            <span className="absolute top-2 start-2 bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
+                              🎥 {t.product.videoBadge}
                             </span>
                           </div>
                         ) : (
@@ -701,13 +745,13 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                               alt="Uploaded product preview"
                               className="w-full h-36 object-cover rounded-xl"
                             />
-                            <span className="absolute top-2 left-2 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
-                              📸 Image Asset Ready
+                            <span className="absolute top-2 start-2 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
+                              📸 {t.filters.mediaImage}
                             </span>
                           </div>
                         )}
                         <div className="flex items-center justify-between pt-2 px-1">
-                          <span className="text-[10px] font-mono text-slate-400 truncate max-w-[200px]">
+                          <span className="text-[10px] font-mono text-slate-400 truncate max-w-[200px]" dir="ltr">
                             {newMediaUrl}
                           </span>
                           <button
@@ -732,14 +776,14 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                         {isUploading ? (
                           <div className="flex flex-col items-center gap-2 py-2">
                             <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-xs font-bold text-indigo-300">Uploading media to server...</span>
+                            <span className="text-xs font-bold text-indigo-300">{t.merchantDashboard.uploadingMedia}</span>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-1.5 py-1">
                             <span className="text-2xl">📸 🎥</span>
-                            <span className="text-xs font-bold text-white">Click to upload Image or Video</span>
+                            <span className="text-xs font-bold text-white">{t.merchantDashboard.dragDropText} {t.merchantDashboard.clickToUpload}</span>
                             <p className="text-[10px] text-slate-400">
-                              Photos: JPG, PNG, WebP (up to 15MB) • Videos: MP4, WebM (up to 60MB)
+                              {t.merchantDashboard.uploadSizeHint}
                             </p>
                           </div>
                         )}
@@ -756,8 +800,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                       type="url"
                       value={newMediaUrl}
                       onChange={(e) => setNewMediaUrl(e.target.value)}
-                      placeholder="https://images.unsplash.com/... or https://.../video.mp4"
+                      placeholder={t.merchantDashboard.urlPlaceholder}
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                      dir="ltr"
                     />
                     <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                       <input
@@ -766,7 +811,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                         onChange={(e) => setNewIsVideo(e.target.checked)}
                         className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-0"
                       />
-                      <span>This URL is an interactive product video (MP4/WebM)</span>
+                      <span>{t.merchantDashboard.videoCheckbox}</span>
                     </label>
                   </div>
                 )}
@@ -777,7 +822,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                   type="submit"
                   className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold py-3 rounded-2xl text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
                 >
-                  {editingProductId ? '💾 Save Product Changes' : '+ Publish to Storefront'}
+                  {editingProductId ? t.merchantDashboard.saveChangesBtn : t.merchantDashboard.publishProductBtn}
                 </button>
                 {editingProductId && (
                   <button
@@ -785,7 +830,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                     onClick={handleCancelEdit}
                     className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-2xl text-xs transition-colors cursor-pointer"
                   >
-                    Cancel
+                    {t.common.cancel}
                   </button>
                 )}
               </div>
@@ -794,7 +839,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
 
           {/* Published Products Grid */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-extrabold text-base text-white">Current Store Products ({merchantProducts.length})</h3>
+            <h3 className="font-extrabold text-base text-white">{t.merchantDashboard.currentProductsTitle} ({formatNumber(merchantProducts.length)})</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {merchantProducts.map(product => (
                 <div
@@ -812,7 +857,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                           autoPlay
                           playsInline
                         />
-                        <span className="absolute bottom-1 right-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded">
+                        <span className="absolute bottom-1 end-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded">
                           ▶
                         </span>
                       </>
@@ -826,15 +871,15 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-xs text-white truncate">{product.title}</h4>
-                    <p className="text-emerald-400 font-extrabold text-xs mt-0.5">{(product.price ?? 0).toLocaleString()} EGP</p>
-                    <p className="text-[11px] text-slate-400">{product.stockQuantity} in stock • ★ {product.rating}</p>
+                    <p className="text-emerald-400 font-extrabold text-xs mt-0.5">{formatCurrency(product.price ?? 0)}</p>
+                    <p className="text-[11px] text-slate-400">{formatNumber(product.stockQuantity)} {t.product.inStock} • ★ {formatNumber(product.rating)}</p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleStartEdit(product)}
                       className="p-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
-                      title="Edit Product"
+                      title={t.merchantDashboard.editTooltip}
                     >
                       ✏️
                     </button>
@@ -842,7 +887,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                       type="button"
                       onClick={() => handleDeleteProduct(product.id, product.title)}
                       className="p-1.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
-                      title="Delete Product"
+                      title={t.merchantDashboard.deleteTooltip}
                     >
                       🗑️
                     </button>
@@ -860,10 +905,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
           <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
             <div>
-              <h3 className="font-extrabold text-base text-white">Merchant Ledger Transactions</h3>
-              <p className="text-xs text-slate-400">Audited settlement ledger and platform fee deductions</p>
+              <h3 className="font-extrabold text-base text-white">{t.merchantDashboard.ledgerTransactionsTitle}</h3>
+              <p className="text-xs text-slate-400">{t.merchantDashboard.ledgerTransactionsDesc}</p>
             </div>
-            <span className="text-xs font-mono text-indigo-400">Account Verified</span>
+            <span className="text-xs font-mono text-indigo-400">{t.common.verified}</span>
           </div>
 
           <div className="space-y-3">

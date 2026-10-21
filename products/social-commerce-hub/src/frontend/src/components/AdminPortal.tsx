@@ -8,6 +8,7 @@ import {
   type UserDto
 } from '../services/api';
 import type { Product } from '../types';
+import { useTranslation } from '../i18n/LanguageContext';
 
 interface AdminPortalProps {
   currentUser: UserDto | null;
@@ -24,6 +25,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   onProductDeleted,
   onMerchantDeleted
 }) => {
+  const { t, formatCurrency, formatNumber } = useTranslation();
   const [activeTab, setActiveTab] = useState<'overview' | 'merchants' | 'orders' | 'users' | 'moderation'>('overview');
   const [overview, setOverview] = useState<PlatformOverviewDto | null>(null);
   const [merchants, setMerchants] = useState<AdminMerchantDto[]>([]);
@@ -32,6 +34,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedChannelFilter, setSelectedChannelFilter] = useState<string>('ALL');
 
   const isAdmin = currentUser?.role === 'Admin';
 
@@ -82,7 +85,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   };
 
   const handleDeleteMerchant = async (merchantId: string, storeName: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete store "${storeName}" and all its catalog products?`)) {
+    if (!window.confirm(`${t.adminPortal.deleteStoreConfirm} (${storeName})`)) {
       return;
     }
     setActionLoading(`delete-merchant-${merchantId}`);
@@ -104,7 +107,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   };
 
   const handleDeleteProduct = async (productId: string, title: string) => {
-    if (!window.confirm(`Are you sure you want to remove violating product "${title}" from the platform?`)) {
+    if (!window.confirm(`${t.adminPortal.deleteProductConfirm} ("${title}")`)) {
       return;
     }
     setActionLoading(`product-${productId}`);
@@ -131,16 +134,16 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-red-500/30">
             🛡️
           </div>
-          <h2 className="text-2xl font-black text-white mb-2">Platform Administration Access Required</h2>
+          <h2 className="text-2xl font-black text-white mb-2">{t.adminPortal.title}</h2>
           <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">
-            You must be signed in with an authorized <span className="text-indigo-400 font-bold">Admin</span> role to access platform overview metrics, multi-store moderation, and fee ledger management.
+            {t.adminPortal.subtitle}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={onOpenAuthModal}
               className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
             >
-              Sign In as Administrator
+              {t.header.signIn}
             </button>
           </div>
         </div>
@@ -156,15 +159,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                🛡️ Platform Command Center
+                {t.adminPortal.liveGovernanceBadge}
               </span>
-              <span className="text-xs text-slate-400 font-mono">Role: {currentUser.role}</span>
+              <span className="text-xs text-slate-400 font-mono">{t.adminPortal.rolePrefix} {currentUser.role}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              SocialHub Administration & Governance
+              {t.adminPortal.title}
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
-              Platform-wide GMV analytics, multi-tenant store moderation, and user security control.
+              {t.adminPortal.subtitle}
             </p>
           </div>
 
@@ -175,7 +178,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer"
             >
               <span className={loading ? 'animate-spin' : ''}>🔄</span>
-              <span>{loading ? 'Refreshing...' : 'Refresh Metrics'}</span>
+              <span>{loading ? t.common.loading : t.adminPortal.refreshMetrics}</span>
             </button>
           </div>
         </div>
@@ -187,7 +190,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               : 'bg-rose-500/20 border border-rose-500/30 text-rose-300'
           }`}>
             <span>{statusMessage.text}</span>
-            <button onClick={() => setStatusMessage(null)} className="ml-2 hover:opacity-75 cursor-pointer">✕</button>
+            <button onClick={() => setStatusMessage(null)} className="ms-2 hover:opacity-75 cursor-pointer">✕</button>
           </div>
         )}
       </div>
@@ -195,11 +198,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto no-scrollbar">
         {[
-          { id: 'overview', label: '📊 Platform Metrics', count: null },
-          { id: 'merchants', label: '🏬 Stores Management', count: merchants.length },
-          { id: 'orders', label: '📦 All Platform Orders', count: orders.length },
-          { id: 'users', label: '👥 User Directory', count: users.length },
-          { id: 'moderation', label: '🛡️ Content Moderation', count: products.length }
+          { id: 'overview', label: `📊 ${t.merchantDashboard.tabsOverview}`, count: null },
+          { id: 'merchants', label: t.adminPortal.tabsStores, count: merchants.length },
+          { id: 'orders', label: t.adminPortal.tabsAudit, count: orders.length },
+          { id: 'users', label: t.adminPortal.userDirectoryTab, count: users.length },
+          { id: 'moderation', label: t.adminPortal.tabsListings, count: products.length }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -215,7 +218,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                 activeTab === tab.id ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-800 text-slate-400'
               }`}>
-                {tab.count}
+                {formatNumber(tab.count)}
               </span>
             )}
           </button>
@@ -229,57 +232,57 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             {/* GMV */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Gross Merchandise Volume (GMV)
+                {t.adminPortal.gmvMetric}
               </div>
               <div className="text-2xl font-black text-white">
-                {overview.totalGrossSales.toLocaleString()} <span className="text-sm font-normal text-indigo-400">EGP</span>
+                {formatCurrency(overview.totalGrossSales)}
               </div>
-              <p className="text-[11px] text-slate-500 mt-2">Total platform volume across all stores</p>
+              <p className="text-[11px] text-slate-500 mt-2">{t.adminPortal.gmvDesc}</p>
             </div>
 
             {/* Platform Revenue (5% Fee) */}
             <div className="bg-gradient-to-br from-indigo-950/80 to-purple-950/80 border border-indigo-500/40 rounded-2xl p-5 shadow-lg">
               <div className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-1 flex items-center justify-between">
-                <span>Platform Commission</span>
+                <span>{t.adminPortal.feeMetric}</span>
                 <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded-full text-indigo-300 font-bold border border-indigo-500/30">
-                  5.0% Fixed Take-Rate
+                  {t.adminPortal.platformTakeRate}
                 </span>
               </div>
               <div className="text-2xl font-black text-indigo-200">
-                {overview.totalPlatformRevenue.toLocaleString()} <span className="text-sm font-normal text-indigo-300">EGP</span>
+                {formatCurrency(overview.totalPlatformRevenue)}
               </div>
-              <p className="text-[11px] text-indigo-300/70 mt-2">SocialHub earned platform commission</p>
+              <p className="text-[11px] text-indigo-300/70 mt-2">{t.adminPortal.feeDesc}</p>
             </div>
 
             {/* Merchant Disbursements */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Net Merchant Disbursements
+                {t.merchantDashboard.netPayout}
               </div>
               <div className="text-2xl font-black text-emerald-400">
-                {overview.totalMerchantDisbursements.toLocaleString()} <span className="text-sm font-normal text-emerald-500">EGP</span>
+                {formatCurrency(overview.totalMerchantDisbursements)}
               </div>
-              <p className="text-[11px] text-slate-500 mt-2">Disbursed net earnings to boutique owners</p>
+              <p className="text-[11px] text-slate-500 mt-2">{t.merchantDashboard.netPayoutDesc}</p>
             </div>
 
             {/* Active Merchants & Orders */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Platform Activity
+                {t.adminPortal.activeStoresMetric}
               </div>
               <div className="flex items-baseline gap-3">
                 <div>
-                  <span className="text-2xl font-black text-white">{overview.totalMerchantsCount}</span>
-                  <span className="text-xs text-slate-400 ml-1">Stores</span>
+                  <span className="text-2xl font-black text-white">{formatNumber(overview.totalMerchantsCount)}</span>
+                  <span className="text-xs text-slate-400 ms-1">{t.header.merchantCenter}</span>
                 </div>
                 <span className="text-slate-600">•</span>
                 <div>
-                  <span className="text-2xl font-black text-white">{overview.totalOrdersCount}</span>
-                  <span className="text-xs text-slate-400 ml-1">Orders</span>
+                  <span className="text-2xl font-black text-white">{formatNumber(overview.totalOrdersCount)}</span>
+                  <span className="text-xs text-slate-400 ms-1">{t.merchantDashboard.tabsOrders}</span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-500 mt-2">
-                {overview.totalProductsCount} products listed • {overview.totalUsersCount} registered users
+                {formatNumber(overview.totalProductsCount)} {t.adminPortal.totalListingsMetric}
               </p>
             </div>
           </div>
@@ -288,7 +291,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Platform Architecture & Identity Health
+              {t.adminPortal.systemHealthHeading}
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-300">
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80">
@@ -315,22 +318,22 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       {activeTab === 'merchants' && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Registered Boutiques & Stores ({merchants.length})</h3>
-            <span className="text-xs text-slate-400">Toggle merchant status to suspend or reinstate storefronts</span>
+            <h3 className="text-sm font-bold text-white">{t.adminPortal.storesHeading} ({formatNumber(merchants.length)})</h3>
+            <span className="text-xs text-slate-400">{t.adminPortal.storesDesc}</span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full text-start text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-bold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="py-3 px-4">Store Name</th>
+                  <th className="py-3 px-4">{t.createMerchantModal.storeNameLabel}</th>
                   <th className="py-3 px-4">Slug</th>
-                  <th className="py-3 px-4">Owner Email</th>
-                  <th className="py-3 px-4">Products</th>
-                  <th className="py-3 px-4">Orders</th>
-                  <th className="py-3 px-4">Total Sales</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                  <th className="py-3 px-4">{t.createMerchantModal.emailLabel}</th>
+                  <th className="py-3 px-4">{t.adminPortal.totalListingsMetric}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.completedOrders}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.grossSales}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.statusCol}</th>
+                  <th className="py-3 px-4 text-end">{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -342,21 +345,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       </div>
                       <span>{m.storeName}</span>
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-400">/{m.slug}</td>
-                    <td className="py-3 px-4 text-slate-300">{m.ownerEmail}</td>
-                    <td className="py-3 px-4">{m.productsCount}</td>
-                    <td className="py-3 px-4">{m.ordersCount}</td>
-                    <td className="py-3 px-4 font-bold text-white">{m.totalSales.toLocaleString()} EGP</td>
+                    <td className="py-3 px-4 font-mono text-slate-400" dir="ltr">/{m.slug}</td>
+                    <td className="py-3 px-4 text-slate-300" dir="ltr">{m.ownerEmail}</td>
+                    <td className="py-3 px-4">{formatNumber(m.productsCount)}</td>
+                    <td className="py-3 px-4">{formatNumber(m.ordersCount)}</td>
+                    <td className="py-3 px-4 font-bold text-white">{formatCurrency(m.totalSales)}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         m.isActive
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                           : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                       }`}>
-                        {m.isActive ? 'Active' : 'Suspended'}
+                        {m.isActive ? t.adminPortal.activeStatus : t.adminPortal.suspendedStatus}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-end">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleToggleMerchantStatus(m.id, m.isActive)}
@@ -368,7 +371,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           }`}
                         >
                           {actionLoading === `merchant-${m.id}`
-                            ? 'Updating...'
+                            ? t.common.loading
                             : m.isActive
                             ? 'Suspend'
                             : 'Reactivate'}
@@ -377,7 +380,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           onClick={() => handleDeleteMerchant(m.id, m.storeName)}
                           disabled={actionLoading === `merchant-${m.id}` || actionLoading === `delete-merchant-${m.id}`}
                           className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 transition-all cursor-pointer"
-                          title="Permanently remove store"
+                          title={t.adminPortal.deleteStoreBtn}
                         >
                           {actionLoading === `delete-merchant-${m.id}` ? '...' : '🗑️'}
                         </button>
@@ -394,51 +397,118 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       {/* Tab: Platform Orders */}
       {activeTab === 'orders' && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Platform-Wide Orders Ledger ({orders.length})</h3>
-            <span className="text-xs text-slate-400">All customer transactions with automated 5% fee split</span>
+          <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-white">{t.adminPortal.auditHeading} ({formatNumber(orders.length)})</h3>
+              <span className="text-xs text-slate-400">{t.adminPortal.auditDesc}</span>
+            </div>
+            {/* Filter Pills */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(['ALL', 'CashOnDelivery', 'Fawry', 'InstaPay', 'PayPal'] as const).map(ch => (
+                <button
+                  key={ch}
+                  onClick={() => setSelectedChannelFilter(ch)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    selectedChannelFilter === ch
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {ch === 'ALL' && t.adminPortal.allChannelsFilter}
+                  {ch === 'CashOnDelivery' && `💵 ${t.checkout.codTitle}`}
+                  {ch === 'Fawry' && `🟡 ${t.checkout.fawryTitle}`}
+                  {ch === 'InstaPay' && `⚡ ${t.checkout.instaPayTitle}`}
+                  {ch === 'PayPal' && `💳 ${t.checkout.paypalTitle}`}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full text-start text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-bold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="py-3 px-4">Order ID</th>
-                  <th className="py-3 px-4">Store</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Gross Total</th>
-                  <th className="py-3 px-4 text-indigo-400">Platform Fee (5%)</th>
-                  <th className="py-3 px-4 text-emerald-400">Merchant Net (95%)</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.orderIdCol}</th>
+                  <th className="py-3 px-4">{t.createMerchantModal.storeNameLabel}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.customerCol}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.totalCol}</th>
+                  <th className="py-3 px-4 text-indigo-400">{t.cart.platformFee}</th>
+                  <th className="py-3 px-4 text-emerald-400">{t.merchantDashboard.netPayout}</th>
+                  <th className="py-3 px-4">{t.adminPortal.channelCol}</th>
+                  <th className="py-3 px-4">{t.adminPortal.settlementCol}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.statusCol}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.dateCol}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {orders.map((o) => (
-                  <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 px-4 font-mono text-slate-400">#{o.id.slice(0, 8)}</td>
-                    <td className="py-3 px-4 font-semibold text-white">{o.storeName}</td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-200">{o.customerName}</div>
-                      <div className="text-[10px] text-slate-400">{o.customerEmail}</div>
-                    </td>
-                    <td className="py-3 px-4 font-bold text-white">{o.totalAmount.toLocaleString()} EGP</td>
-                    <td className="py-3 px-4 font-bold text-indigo-400">+{o.platformFeeAmount.toLocaleString()} EGP</td>
-                    <td className="py-3 px-4 font-bold text-emerald-400">{o.merchantNetAmount.toLocaleString()} EGP</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        o.status === 'Paid' || o.status === 'Fulfilled'
-                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                          : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      }`}>
-                        {o.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-400 text-[11px]">
-                      {new Date(o.createdAtUtc).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
+                {orders
+                  .filter(o => selectedChannelFilter === 'ALL' || (o.paymentMethod || 'PayPal') === selectedChannelFilter)
+                  .map((o) => (
+                    <tr key={o.id} className="hover:bg-slate-800/30 transition-colors">
+                      <td className="py-3 px-4 font-mono text-slate-400" dir="ltr">#{o.id.slice(0, 8)}</td>
+                      <td className="py-3 px-4 font-semibold text-white">{o.storeName}</td>
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-200">{o.customerName}</div>
+                        <div className="text-[10px] text-slate-400 font-mono" dir="ltr">{o.customerEmail}</div>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-white">{formatCurrency(o.totalAmount)}</td>
+                      <td className="py-3 px-4 font-bold text-indigo-400">+{formatCurrency(o.platformFeeAmount)}</td>
+                      <td className="py-3 px-4 font-bold text-emerald-400">{formatCurrency(o.merchantNetAmount)}</td>
+                      <td className="py-3 px-4">
+                        {o.paymentMethod === 'CashOnDelivery' && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                            💵 {t.checkout.codTitle}
+                          </span>
+                        )}
+                        {o.paymentMethod === 'Fawry' && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 whitespace-nowrap">
+                            🟡 {t.checkout.fawryTitle}
+                          </span>
+                        )}
+                        {o.paymentMethod === 'InstaPay' && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
+                            ⚡ {t.checkout.instaPayTitle}
+                          </span>
+                        )}
+                        {(o.paymentMethod === 'PayPal' || !o.paymentMethod) && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">
+                            💳 {t.checkout.paypalTitle}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        {o.settlementStatus === 'Settled' || o.status === 'Paid' || o.status === 'Fulfilled' ? (
+                          <span className="text-emerald-400 font-bold flex items-center gap-1 text-[11px] whitespace-nowrap">
+                            <span>✓</span> {t.checkout.settled}
+                          </span>
+                        ) : o.settlementStatus === 'PendingCollection' || o.paymentMethod === 'CashOnDelivery' ? (
+                          <span className="text-amber-400 font-bold flex items-center gap-1 text-[11px] whitespace-nowrap">
+                            <span>⏳</span> {t.checkout.pendingCollection}
+                          </span>
+                        ) : o.settlementStatus === 'PendingVerification' || o.paymentMethod === 'InstaPay' ? (
+                          <span className="text-purple-400 font-bold flex items-center gap-1 text-[11px] whitespace-nowrap">
+                            <span>⏳</span> {t.checkout.pendingVerification}
+                          </span>
+                        ) : (
+                          <span className="text-yellow-400 font-bold flex items-center gap-1 text-[11px] whitespace-nowrap">
+                            <span>⏳</span> {t.checkout.awaitingKiosk}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                          o.status === 'Paid' || o.status === 'Fulfilled'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}>
+                          {o.status === 'Paid' ? t.checkout.statusPaid : o.status === 'Fulfilled' ? t.checkout.statusFulfilled : t.checkout.statusPending}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-400 text-[11px]">
+                        {new Date(o.createdAtUtc).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -449,19 +519,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       {activeTab === 'users' && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">Registered User Accounts ({users.length})</h3>
-            <span className="text-xs text-slate-400">Role-Based Access Control (RBAC) Directory</span>
+            <h3 className="text-sm font-bold text-white">{t.adminPortal.registeredUsersHeading} ({formatNumber(users.length)})</h3>
+            <span className="text-xs text-slate-400">{t.adminPortal.rbacSubtitle}</span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full text-start text-xs text-slate-300">
               <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-bold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th className="py-3 px-4">Full Name</th>
-                  <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4">Associated Store</th>
-                  <th className="py-3 px-4">Registration Date</th>
+                  <th className="py-3 px-4">{t.authModal.fullNameLabel}</th>
+                  <th className="py-3 px-4">{t.authModal.emailLabel}</th>
+                  <th className="py-3 px-4">{t.adminPortal.roleCol}</th>
+                  <th className="py-3 px-4">{t.adminPortal.associatedStoreCol}</th>
+                  <th className="py-3 px-4">{t.merchantDashboard.dateCol}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -473,7 +543,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       </div>
                       <span>{u.fullName}</span>
                     </td>
-                    <td className="py-3 px-4 text-slate-300 font-mono text-[11px]">{u.email}</td>
+                    <td className="py-3 px-4 text-slate-300 font-mono text-[11px]" dir="ltr">{u.email}</td>
                     <td className="py-3 px-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                         u.role === 'Admin'
@@ -485,7 +555,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         {u.role}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-400">
+                    <td className="py-3 px-4 font-mono text-slate-400" dir="ltr">
                       {u.storeSlug ? `/${u.storeSlug}` : '—'}
                     </td>
                     <td className="py-3 px-4 text-slate-400 text-[11px]">
@@ -504,11 +574,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-4">
             <div>
-              <h3 className="text-sm font-bold text-white">Product Catalog Moderation Queue</h3>
-              <p className="text-xs text-slate-400">Review products published across all stores and moderate non-compliant listings</p>
+              <h3 className="text-sm font-bold text-white">{t.adminPortal.listingsHeading}</h3>
+              <p className="text-xs text-slate-400">{t.adminPortal.listingsDesc}</p>
             </div>
             <span className="text-xs text-indigo-400 font-bold bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-500/30">
-              {products.length} Active Listings
+              {formatNumber(products.length)} {t.adminPortal.totalListingsMetric}
             </span>
           </div>
 
@@ -529,19 +599,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       {p.storeName}
                     </span>
                     <h4 className="text-xs font-bold text-white truncate">{p.title}</h4>
-                    <p className="text-xs font-bold text-emerald-400 mt-1">{p.price.toLocaleString()} EGP</p>
-                    <span className="text-[10px] text-slate-500">Stock: {p.stockQuantity} units</span>
+                    <p className="text-xs font-bold text-emerald-400 mt-1">{formatCurrency(p.price)}</p>
+                    <span className="text-[10px] text-slate-500">{t.product.inStock}: {formatNumber(p.stockQuantity)}</span>
                   </div>
                 </div>
 
                 <div className="bg-slate-900/60 p-2.5 border-t border-slate-800/80 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">Rating: ⭐ {p.rating}</span>
+                  <span className="text-[11px] text-slate-400">{t.product.ratingLabel}: ⭐ {formatNumber(p.rating)}</span>
                   <button
                     onClick={() => handleDeleteProduct(p.id, p.title)}
                     disabled={actionLoading === `product-${p.id}`}
                     className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white rounded-lg text-xs font-bold border border-red-500/30 transition-all cursor-pointer"
                   >
-                    {actionLoading === `product-${p.id}` ? 'Removing...' : '🗑️ Remove Listing'}
+                    {actionLoading === `product-${p.id}` ? t.common.loading : `🗑️ ${t.adminPortal.deleteProductBtn}`}
                   </button>
                 </div>
               </div>

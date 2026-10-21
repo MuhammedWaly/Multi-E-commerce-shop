@@ -12,6 +12,7 @@ public static class DbInitializer
 
         // Apply schema updates safely to existing SQLite database if needed
         await EnsureUserColumnsExistAsync(context);
+        await EnsureOrderColumnsExistAsync(context);
 
         Merchant? sariMerchant = null;
         Merchant? cairoLeather = null;
@@ -71,6 +72,30 @@ public static class DbInitializer
             "ALTER TABLE Users ADD COLUMN EmailConfirmationTokenExpiresUtc TEXT NULL;",
             "ALTER TABLE Users ADD COLUMN PasswordResetToken TEXT NULL;",
             "ALTER TABLE Users ADD COLUMN PasswordResetTokenExpiresUtc TEXT NULL;"
+        };
+
+        foreach (var sql in columns)
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(sql);
+            }
+            catch
+            {
+                // Column already exists or provider does not support raw alter; ignore safely
+            }
+        }
+    }
+
+    private static async Task EnsureOrderColumnsExistAsync(SocialCommerceDbContext context)
+    {
+        var columns = new[]
+        {
+            "ALTER TABLE Orders ADD COLUMN PaymentMethod TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN PaymentReference TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN PaymentInstructions TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN PaymentExpiresAtUtc TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN SenderWalletOrReference TEXT NULL;"
         };
 
         foreach (var sql in columns)

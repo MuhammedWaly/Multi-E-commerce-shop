@@ -124,7 +124,10 @@ public class AdminService : IAdminService
             o.PlatformFeeAmount,
             o.MerchantNetAmount,
             o.Status.ToString(),
-            o.CreatedAtUtc
+            o.CreatedAtUtc,
+            o.PaymentMethod,
+            o.PaymentReference,
+            (o.Status == OrderStatus.Paid || o.Status == OrderStatus.Fulfilled) ? "Settled" : "PendingSettlement"
         )).ToList();
     }
 
