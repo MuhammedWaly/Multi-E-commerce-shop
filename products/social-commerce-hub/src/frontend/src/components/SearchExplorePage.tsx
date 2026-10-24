@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import type { Product, Merchant } from '../types';
 import { ProductCard } from './ProductCard';
 import { useTranslation } from '../i18n/LanguageContext';
+import { SearchIcon, StoreIcon, RefreshIcon } from './icons/Icons';
 
 interface SearchExplorePageProps {
   initialQuery?: string;
@@ -204,7 +205,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
             onClick={handleResetFilters}
             className="inline-flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer self-start sm:self-auto shadow-sm"
           >
-            <span>🔄</span>
+            <RefreshIcon className="w-3.5 h-3.5" />
             <span>{t.searchPage.resetAllButton}</span>
           </button>
         )}
@@ -222,7 +223,9 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
 
           {/* Search Input Box */}
           <div className="relative flex items-center max-w-2xl">
-            <span className="absolute start-4 text-slate-400">🔍</span>
+            <span className="absolute start-4 text-slate-400">
+              <SearchIcon className="w-4 h-4" />
+            </span>
             <input
               type="text"
               value={query}
@@ -253,7 +256,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
         <div className="bg-slate-900/60 border border-indigo-500/20 rounded-2xl p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span>🏬</span>
+              <StoreIcon className="w-4 h-4 text-indigo-400" />
               <span>{t.searchPage.matchingBoutiquesTitle} ({formatNumber(matchingMerchants.length)})</span>
             </h3>
             <span className="text-xs text-slate-400">{t.searchPage.clickToVisit}</span>
@@ -293,7 +296,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
       {/* Main Filter & Results Layout */}
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         {/* Left Filter Sidebar */}
-        <aside className="w-full lg:w-72 bg-slate-900/80 border border-slate-800 rounded-3xl p-5 space-y-6 shrink-0 shadow-lg sticky top-24">
+        <aside className="w-full lg:w-72 xl:w-80 bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-6 shrink-0 shadow-lg sticky top-24">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <span>⚡</span>
@@ -444,7 +447,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
               }}
               className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 py-2 px-3 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
-              <option value="all">🏬 {t.filters.allBoutiques}</option>
+              <option value="all">{t.filters.allBoutiques}</option>
               {merchants.map((m) => (
                 <option key={m.id} value={m.slug}>
                   {m.name}
@@ -548,7 +551,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
           {/* Product Grid Cards */}
           {paginatedProducts.length === 0 ? (
             <div className="p-16 text-center bg-slate-900/40 rounded-3xl border border-slate-800 space-y-4">
-              <div className="text-5xl">🔍</div>
+              <SearchIcon className="w-12 h-12 text-slate-600 mx-auto" />
               <h4 className="text-xl font-bold text-white">{t.searchPage.noProductsTitle}</h4>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
                 {t.searchPage.noProductsDesc}
@@ -561,7 +564,7 @@ export const SearchExplorePage: React.FC<SearchExplorePageProps> = ({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 sm:gap-7">
               {paginatedProducts.map((product) => (
                 <ProductCard
                   key={product.id}

@@ -14,7 +14,13 @@ public record CreateOrderRequest(
     string? PaymentMethod = "PayPal",
     string? SenderWallet = null,
     string? PaymentReference = null,
-    string? SenderWalletOrReference = null
+    string? SenderWalletOrReference = null,
+    double? DeliveryLatitude = null,
+    double? DeliveryLongitude = null,
+    string? CustomerPhone = null,
+    string? BuildingDetails = null,
+    string? PromoCode = null,
+    bool IsPhoneVerified = false
 )
 {
     public string? EffectiveSenderWallet => !string.IsNullOrWhiteSpace(SenderWalletOrReference)
@@ -51,7 +57,38 @@ public record OrderDto(
     string? PaymentInstructions = null,
     DateTime? PaymentExpiresAtUtc = null,
     string? SenderWalletOrReference = null,
-    string? SettlementStatus = null
+    string? SettlementStatus = null,
+    decimal ShippingFee = 0m,
+    double DistanceKm = 0,
+    int EstimatedDeliveryMinutes = 0,
+    double? DeliveryLatitude = null,
+    double? DeliveryLongitude = null,
+    string? FormattedEta = null,
+    string? StoreName = null,
+    string? StoreAddress = null,
+    string? CustomerPhone = null,
+    string? BuildingDetails = null,
+    string? PromoCode = null,
+    decimal DiscountAmount = 0m,
+    bool IsPhoneVerified = false
+);
+
+public record OrderTrackLookupRequest(
+    string OrderIdentifier,
+    string ContactInfo
+);
+
+public record ValidatePromoRequest(
+    string Code,
+    decimal ItemsSubtotal
+);
+
+public record ValidatePromoResponse(
+    bool IsValid,
+    string Code,
+    decimal DiscountAmount,
+    string Description,
+    string? ErrorMessage = null
 );
 
 public record CaptureOrderRequest(

@@ -10,6 +10,8 @@ import { AdminPortal } from './components/AdminPortal';
 import { BuyerOrdersModal } from './components/BuyerOrdersModal';
 import { ReviewsModal } from './components/ReviewsModal';
 import { CartSlideOver } from './components/CartSlideOver';
+import { QuickTrackModal } from './components/QuickTrackModal';
+import { OrderTrackingModal } from './components/OrderTrackingModal';
 import { CreateMerchantModal } from './components/CreateMerchantModal';
 import { AuthModal } from './components/AuthModal';
 import { AccountSettingsModal } from './components/AccountSettingsModal';
@@ -43,6 +45,8 @@ export const App: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState<boolean>(false);
   const [isBuyerOrdersOpen, setIsBuyerOrdersOpen] = useState<boolean>(false);
+  const [isQuickTrackOpen, setIsQuickTrackOpen] = useState<boolean>(false);
+  const [activeTrackingOrderId, setActiveTrackingOrderId] = useState<string | null>(null);
   const [reviewProduct, setReviewProduct] = useState<Product | null>(null);
   const [currentUser, setCurrentUser] = useState<UserDto | null>(() => getStoredUser());
 
@@ -231,13 +235,14 @@ export const App: React.FC = () => {
         currentUser={currentUser}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenBuyerOrders={() => setIsBuyerOrdersOpen(true)}
+        onOpenQuickTrack={() => setIsQuickTrackOpen(true)}
         onOpenAccountSettings={() => setIsAccountSettingsOpen(true)}
         onSelectStore={(slug) => handleStoreClick(slug)}
         onLogout={handleLogout}
       />
 
       {/* Main View Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-[1536px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activePortal === 'admin' ? (
           /* Platform Administration Command Center */
           <AdminPortal
@@ -267,6 +272,11 @@ export const App: React.FC = () => {
             }}
             onDeleteProduct={(productId) => {
               setProducts((prev) => prev.filter((p) => p.id !== productId));
+            }}
+            onUpdateMerchant={(updatedMerchant) => {
+              setMerchants((prev) =>
+                prev.map((m) => (m.id === updatedMerchant.id || m.slug === updatedMerchant.slug ? updatedMerchant : m))
+              );
             }}
             onViewPublicStore={(merchant) => {
               setActivePortal('buyer');
@@ -324,24 +334,24 @@ export const App: React.FC = () => {
             </div>
 
             {/* Split Screen Desktop Catalog Area (Filters Sidebar + Expansive Product Grid) */}
-            <div id="marketplace-catalog" className="pt-6">
+            <div id="marketplace-catalog" className="pt-8">
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
                 <div>
                   <span className="text-xs font-bold text-indigo-400 uppercase tracking-wider">
                     {t.catalog.badge}
                   </span>
-                  <h2 className="text-2xl font-black text-white tracking-tight">
+                  <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                     {t.catalog.title}
                   </h2>
                 </div>
                 <div className="flex items-center gap-3">
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm text-slate-400">
                     <span className="font-bold text-white me-1">{formatNumber(filteredProducts.length)}</span>
                     {t.catalog.itemCountText}
                   </p>
                   <button
                     onClick={handleOpenSeeAll}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-3.5 py-1.5 rounded-xl transition-all cursor-pointer shadow-sm"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm"
                   >
                     <span>{t.catalog.seeAllPaginate}</span>
                     <span>↗</span>
@@ -385,6 +395,7 @@ export const App: React.FC = () => {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
         onClearCart={() => setCartItems([])}
+        currentUser={currentUser}
       />
 
       {/* Buyer Orders History Modal */}
@@ -393,12 +404,34 @@ export const App: React.FC = () => {
         onClose={() => setIsBuyerOrdersOpen(false)}
         onOpenReviewModal={(prod) => setReviewProduct(prod)}
         allProducts={products}
+        currentUser={currentUser}
+      />
+
+      {/* Quick Track Order Lookup Modal (Zero friction for Guests & Shoppers) */}
+      <QuickTrackModal
+        isOpen={isQuickTrackOpen}
+        onClose={() => setIsQuickTrackOpen(false)}
+        onTrackingLoaded={(tracking) => {
+          setActiveTrackingOrderId(tracking.orderId);
+        }}
+      />
+
+      {/* Live Order Tracking Modal */}
+      <OrderTrackingModal
+        isOpen={!!activeTrackingOrderId}
+        onClose={() => setActiveTrackingOrderId(null)}
+        orderId={activeTrackingOrderId}
       />
 
       {/* Merchant Registration Onboarding Modal */}
       <CreateMerchantModal
         isOpen={isMerchantModalOpen}
         onClose={() => setIsMerchantModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        onOpenAuthModal={() => {
+          setIsMerchantModalOpen(false);
+          setIsAuthModalOpen(true);
+        }}
         onMerchantCreated={(newMerchant) => {
           setMerchants((prev) => [
             {

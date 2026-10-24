@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { StoreIcon, BagIcon, CardIcon } from './components/icons/Icons';
+import { API_BASE } from './services/api';
 
 export interface FeedItem {
   id: string;
@@ -29,14 +31,14 @@ export const FeedContainer: React.FC = () => {
   const [customerAddress, setCustomerAddress] = useState<string>('15 Nile Corniche, Zamalek, Cairo');
 
   const categories = [
-    { id: 'all', label: '🔥 All Discoveries' },
-    { id: 'fashion', label: '👗 Fashion' },
-    { id: 'leather', label: '👜 Handcrafted Leather' },
-    { id: 'accessories', label: '✨ Accessories' }
+    { id: 'all', label: 'All Discoveries' },
+    { id: 'fashion', label: 'Fashion' },
+    { id: 'leather', label: 'Handcrafted Leather' },
+    { id: 'accessories', label: 'Accessories' }
   ];
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/feed')
+    fetch(`${API_BASE}/feed`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && data.length > 0) {
@@ -117,7 +119,7 @@ export const FeedContainer: React.FC = () => {
     setOrderProcessing(true);
     try {
       // 1. Create order on backend API
-      const response = await fetch('http://localhost:5000/api/orders', {
+      const response = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -132,7 +134,7 @@ export const FeedContainer: React.FC = () => {
       if (response.ok) {
         const orderData = await response.json();
         // 2. Simulate instant capture in sandbox
-        const captureRes = await fetch(`http://localhost:5000/api/orders/${orderData.id}/capture`, {
+        const captureRes = await fetch(`${API_BASE}/orders/${orderData.id}/capture`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -250,7 +252,7 @@ export const FeedContainer: React.FC = () => {
                 onClick={() => setSelectedStore(item.storeName)}
                 className="absolute bottom-3 left-3 bg-slate-950/80 hover:bg-slate-900 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 transition-colors shadow-lg"
               >
-                <span>🏬</span>
+                <StoreIcon className="w-3.5 h-3.5 text-indigo-400" />
                 <span>@{item.storeName}</span>
                 <span className="text-[10px] text-slate-400">→</span>
               </button>
@@ -292,7 +294,7 @@ export const FeedContainer: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🛍️</span>
+                <BagIcon className="w-5 h-5 text-indigo-400" />
                 <h3 className="font-bold text-lg text-white">Express Checkout</h3>
               </div>
               <button
@@ -411,7 +413,8 @@ export const FeedContainer: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <span>💳 Pay {selectedItem.price} EGP with PayPal</span>
+                      <CardIcon className="w-4 h-4" />
+                      <span>Pay {selectedItem.price} EGP with PayPal</span>
                     </>
                   )}
                 </button>

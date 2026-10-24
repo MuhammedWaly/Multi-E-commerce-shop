@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using SocialCommerce.Application.Common;
 using SocialCommerce.Application.DTOs;
 using SocialCommerce.Application.Interfaces;
@@ -19,6 +20,7 @@ public class FeedController : BaseApiController
     /// Retrieves paginated visual discovery feed for the marketplace
     /// </summary>
     [HttpGet]
+    [OutputCache(Duration = 30)]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<FeedItemDto>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<FeedItemDto>>>> GetFeed(
         [FromQuery] int page = 1,

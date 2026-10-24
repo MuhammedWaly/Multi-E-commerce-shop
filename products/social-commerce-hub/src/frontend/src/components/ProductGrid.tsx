@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Product } from '../types';
 import { ProductCard } from './ProductCard';
 import { useTranslation } from '../i18n/LanguageContext';
+import { SearchIcon } from './icons/Icons';
 
 interface ProductGridProps {
   products: Product[];
@@ -31,19 +32,18 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   return (
     <section className="flex-1 space-y-4">
       {/* Grid Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
-        <div className="text-xs text-slate-300">
-          {t.common.loading ? null : null}
-          <span className="font-bold text-white me-1">{formatNumber(sortedProducts.length)}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+        <div className="text-sm text-slate-300">
+          <span className="font-bold text-white me-1.5">{formatNumber(sortedProducts.length)}</span>
           {t.catalog.showingText}
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          <label className="text-xs text-slate-400">{t.catalog.sortBy}</label>
+        <div className="flex items-center gap-2.5 self-end sm:self-auto">
+          <label className="text-sm text-slate-400 font-medium">{t.catalog.sortBy}</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs text-slate-200 py-1.5 px-3 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer"
+            className="bg-slate-950 border border-slate-800 text-sm text-slate-200 py-2 px-3.5 rounded-xl focus:outline-none focus:border-indigo-500 cursor-pointer min-h-[40px]"
           >
             <option value="featured">{t.catalog.sortFeatured}</option>
             <option value="price-low">{t.catalog.sortPriceLow}</option>
@@ -56,14 +56,14 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       {/* Grid Cards Container */}
       {sortedProducts.length === 0 ? (
         <div className="p-16 text-center bg-slate-900/50 rounded-3xl border border-slate-800 space-y-3">
-          <div className="text-4xl">🔍</div>
+          <SearchIcon className="w-12 h-12 text-slate-600 mx-auto" />
           <h4 className="text-lg font-bold text-white">{t.catalog.noItemsTitle}</h4>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+          <p className="text-sm text-slate-400 max-w-sm mx-auto">
             {t.catalog.noItemsDesc}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 sm:gap-7">
           {sortedProducts.map((product) => (
             <ProductCard
               key={product.id}

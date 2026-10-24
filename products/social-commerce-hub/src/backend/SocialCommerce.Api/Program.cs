@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SocialCommerce.Api.Filters;
+using SocialCommerce.Api.Middleware;
 using SocialCommerce.Application.Common;
 using SocialCommerce.Application.Interfaces;
 using SocialCommerce.Application.Payments;
+using SocialCommerce.Application.Shipping;
 using SocialCommerce.Infrastructure.Payments;
 using SocialCommerce.Infrastructure.Payments.Egyptian;
 using SocialCommerce.Infrastructure.Payments.PayPal;
@@ -21,6 +23,39 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<SocialCommerceDbContext>(options =>
     options.UseSqlite(connectionString));
 
+// Multi-Tenancy Architecture
+builder.Services.AddScoped<ITenantContext, TenantContext>();
+
+// Caching Layer: In-Memory L1 + Distributed L2 (Redis / Fallback) + Output Cache
+builder.Services.AddMemoryCache();
+var redisConnection = builder.Configuration.GetConnectionString("Redis")
+                      ?? builder.Configuration["Redis:ConnectionString"]
+                      ?? (builder.Environment.IsProduction() ? "localhost:6379,abortConnect=false" : null);
+
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConnection;
+        options.InstanceName = "SocialCommerce_";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+builder.Services.AddSingleton<ICacheService, HybridDistributedCacheService>();
+builder.Services.AddOutputCache(options =>
+{
+    options.AddBasePolicy(b => b.Expire(TimeSpan.FromSeconds(30)));
+    options.AddPolicy("CatalogCache", b => b.Expire(TimeSpan.FromMinutes(2)).Tag("catalog"));
+});
+
+// Background Worker & Async Queue Infrastructure
+builder.Services.AddSingleton<IBackgroundTaskQueue, BackgroundTaskQueue>();
+builder.Services.AddHostedService<QueuedHostedService>();
+builder.Services.AddHostedService<MaintenanceBackgroundWorker>();
+
 // Register Security & Password Hashing Services
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
@@ -34,9 +69,22 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
+builder.Services.AddSingleton<IShippingService, ShippingCalculationService>();
+builder.Services.AddSingleton<IPromoService, PromoCodeService>();
+builder.Services.AddSingleton<IOtpVerificationService, OtpVerificationService>();
 
 // Register Payment Engine & Egyptian Payment Channels
 builder.Services.Configure<PayPalSettings>(builder.Configuration.GetSection(PayPalSettings.SectionName));
+builder.Services.PostConfigure<PayPalSettings>(settings =>
+{
+    var frontendUrl = builder.Configuration["FrontendUrl"] ?? builder.Configuration["FRONTEND_URL"];
+    if (!string.IsNullOrWhiteSpace(frontendUrl))
+    {
+        var trimmed = frontendUrl.Trim().TrimEnd('/');
+        settings.ReturnUrl = $"{trimmed}/checkout/success";
+        settings.CancelUrl = $"{trimmed}/checkout/cancel";
+    }
+});
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IPaymentProvider>(sp =>
 {
@@ -108,12 +156,36 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 
-// Enable CORS for React Web Frontend
+// Enable Dynamic CORS for React Web Frontend & Local Dev
+var configuredOrigins = new List<string> { "http://localhost:5173", "http://localhost:3000" };
+var frontendEnv = builder.Configuration["FrontendUrl"] ?? builder.Configuration["FRONTEND_URL"];
+if (!string.IsNullOrWhiteSpace(frontendEnv))
+{
+    var cleanUrl = frontendEnv.Trim().TrimEnd('/');
+    if (!configuredOrigins.Contains(cleanUrl))
+    {
+        configuredOrigins.Add(cleanUrl);
+    }
+}
+var allowedOriginsSetting = builder.Configuration["AllowedOrigins"] ?? builder.Configuration["ALLOWED_ORIGINS"];
+if (!string.IsNullOrWhiteSpace(allowedOriginsSetting))
+{
+    var extra = allowedOriginsSetting.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    foreach (var o in extra)
+    {
+        var clean = o.TrimEnd('/');
+        if (!configuredOrigins.Contains(clean))
+        {
+            configuredOrigins.Add(clean);
+        }
+    }
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
+        policy.WithOrigins(configuredOrigins.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -131,11 +203,20 @@ if (!Directory.Exists(uploadsDir))
 
 var app = builder.Build();
 
-// Initialize and seed database if necessary
+// Resilient database initialization & migration seeding
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<SocialCommerceDbContext>();
-    await DbInitializer.InitializeAsync(db);
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<SocialCommerceDbContext>();
+        await DbInitializer.InitializeAsync(db);
+        logger.LogInformation("Database initialized and verified successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while initializing or seeding the database.");
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -143,12 +224,35 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Lightweight Keep-Alive Endpoints for Render & Cron-job
+app.MapGet("/ping", () => Results.Ok(new
+{
+    status = "healthy",
+    service = "social-commerce-api",
+    environment = app.Environment.EnvironmentName,
+    timestamp = DateTime.UtcNow
+})).AllowAnonymous();
+
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy",
+    service = "social-commerce-api",
+    environment = app.Environment.EnvironmentName,
+    timestamp = DateTime.UtcNow
+})).AllowAnonymous();
+
 app.UseCors("AllowFrontend");
 app.UseStaticFiles();
+
+// Output Caching Middleware
+app.UseOutputCache();
 
 // Authentication & Authorization Pipeline
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Multi-Tenant Context Resolution
+app.UseMiddleware<TenantResolutionMiddleware>();
 
 // Map RESTful Controllers
 app.MapControllers();

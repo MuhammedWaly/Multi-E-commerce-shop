@@ -19,6 +19,19 @@ public record CreateMerchantRequest(
     string Email
 );
 
+public record UpdateMerchantProfileRequest(
+    string StoreName,
+    string? Tagline = null,
+    string? Bio = null,
+    string? AvatarUrl = null,
+    string? BannerUrl = null,
+    string? Phone = null,
+    string? Address = null,
+    string? City = null,
+    double? Latitude = null,
+    double? Longitude = null
+);
+
 public record MerchantDto(
     Guid Id,
     string StoreName,
@@ -26,7 +39,16 @@ public record MerchantDto(
     string Email,
     decimal Balance,
     bool IsActive,
-    DateTime CreatedAtUtc
+    DateTime CreatedAtUtc,
+    string Tagline = "",
+    string Bio = "",
+    string AvatarUrl = "",
+    string BannerUrl = "",
+    string Phone = "",
+    string Address = "Zamalek, Cairo",
+    string City = "Cairo",
+    double Latitude = 30.0626,
+    double Longitude = 31.2223
 );
 
 public record AddProductRequest(
@@ -84,5 +106,14 @@ public record MerchantDetailsDto(
     decimal Balance,
     bool IsActive,
     DateTime CreatedAtUtc,
-    IReadOnlyList<ProductDto> Products
+    IReadOnlyList<ProductDto> Products,
+    string Tagline = "",
+    string Bio = "",
+    string AvatarUrl = "",
+    string BannerUrl = "",
+    string Phone = "",
+    string Address = "Zamalek, Cairo",
+    string City = "Cairo",
+    double Latitude = 30.0626,
+    double Longitude = 31.2223
 );

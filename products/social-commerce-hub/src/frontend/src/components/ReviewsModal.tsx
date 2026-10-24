@@ -156,8 +156,10 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
         </div>
 
         {/* Verified Policy Callout */}
-        <div className="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl flex items-center gap-2.5 text-xs text-indigo-300">
-          <span className="text-base">🛡️</span>
+        <div className="p-3 bg-indigo-950/30 border border-indigo-500/20 rounded-2xl flex items-center gap-2.5 text-xs text-indigo-300">
+          <svg className="w-4 h-4 shrink-0 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
           <span>{t.reviews.title}: {t.reviews.basedOn} {t.reviews.verifiedPurchases}.</span>
         </div>
 
@@ -265,9 +267,9 @@ export const ReviewsModal: React.FC<ReviewsModalProps> = ({
               <button
                 type="submit"
                 disabled={submitting || !reviewComment.trim()}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
               >
-                {submitting ? t.reviews.submittingReview : `${t.reviews.submitReviewBtn} ⭐`}
+                {submitting ? t.reviews.submittingReview : t.reviews.submitReviewBtn}
               </button>
             </form>
           )}

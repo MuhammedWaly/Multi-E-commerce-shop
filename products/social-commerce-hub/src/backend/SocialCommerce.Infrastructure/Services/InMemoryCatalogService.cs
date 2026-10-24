@@ -62,7 +62,81 @@ public class InMemoryCatalogService : ICatalogService
             merchant.Email,
             merchant.Balance,
             merchant.IsActive,
-            merchant.CreatedAtUtc
+            merchant.CreatedAtUtc,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
+        ));
+    }
+
+    public Task<MerchantDto?> GetMerchantByIdAsync(Guid merchantId, CancellationToken ct = default)
+    {
+        var merchant = _merchants.FirstOrDefault(m => m.Id == merchantId);
+        if (merchant == null)
+            return Task.FromResult<MerchantDto?>(null);
+
+        return Task.FromResult<MerchantDto?>(new MerchantDto(
+            merchant.Id,
+            merchant.StoreName,
+            merchant.Slug,
+            merchant.Email,
+            merchant.Balance,
+            merchant.IsActive,
+            merchant.CreatedAtUtc,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
+        ));
+    }
+
+    public Task<MerchantDto> UpdateMerchantProfileAsync(Guid merchantId, UpdateMerchantProfileRequest request, CancellationToken ct = default)
+    {
+        var merchant = _merchants.FirstOrDefault(m => m.Id == merchantId);
+        if (merchant == null)
+            throw new ArgumentException("Merchant store not found.", nameof(merchantId));
+
+        merchant.UpdateProfile(
+            request.StoreName,
+            request.Tagline,
+            request.Bio,
+            request.AvatarUrl,
+            request.BannerUrl,
+            request.Phone,
+            request.Address,
+            request.City,
+            request.Latitude,
+            request.Longitude
+        );
+
+        return Task.FromResult(new MerchantDto(
+            merchant.Id,
+            merchant.StoreName,
+            merchant.Slug,
+            merchant.Email,
+            merchant.Balance,
+            merchant.IsActive,
+            merchant.CreatedAtUtc,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
         ));
     }
 
@@ -95,7 +169,16 @@ public class InMemoryCatalogService : ICatalogService
             merchant.Balance,
             merchant.IsActive,
             merchant.CreatedAtUtc,
-            merchantProducts
+            merchantProducts,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
         ));
     }
 

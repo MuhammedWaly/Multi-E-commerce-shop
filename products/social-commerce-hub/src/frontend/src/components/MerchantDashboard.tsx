@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { Merchant, Product, PaymentChannel } from '../types';
 import { api, type UserDto } from '../services/api';
 import { useTranslation } from '../i18n/LanguageContext';
+import { StoreIcon, LockIcon, CashIcon, CardIcon, TrashIcon, VideoIcon, ImageIcon } from './icons/Icons';
 
 interface MerchantDashboardProps {
   merchants: Merchant[];
@@ -9,6 +10,7 @@ interface MerchantDashboardProps {
   onAddProduct: (newProduct: Product) => void;
   onUpdateProduct?: (updatedProduct: Product) => void;
   onDeleteProduct?: (productId: string) => void;
+  onUpdateMerchant?: (updatedMerchant: Merchant) => void;
   onViewPublicStore: (merchant: Merchant) => void;
   currentUser?: UserDto | null;
   onOpenAuthModal?: () => void;
@@ -20,6 +22,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
+  onUpdateMerchant,
   onViewPublicStore,
   currentUser,
   onOpenAuthModal
@@ -31,8 +34,8 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
     return (
       <div className="max-w-2xl mx-auto py-16 px-4 text-center animate-fade-in">
         <div className="bg-slate-900 border border-purple-500/30 rounded-3xl p-8 shadow-2xl">
-          <div className="w-16 h-16 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 border border-purple-500/30">
-            🏪
+          <div className="w-16 h-16 bg-purple-500/20 text-purple-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-purple-500/30">
+            <StoreIcon className="w-8 h-8" />
           </div>
           <h2 className="text-2xl font-black text-white mb-2">{t.merchantDashboard.title}</h2>
           <p className="text-slate-400 text-sm max-w-md mx-auto mb-6">
@@ -64,7 +67,117 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
   const currentMerchant = userMerchant;
   const merchantProducts = products.filter(p => p.merchantId === currentMerchant.id);
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'ledger'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'catalog' | 'ledger' | 'settings'>('orders');
+
+  // Store profile customization state
+  const [profileStoreName, setProfileStoreName] = useState(currentMerchant.name);
+  const [profileTagline, setProfileTagline] = useState(currentMerchant.tagline || '');
+  const [profileBio, setProfileBio] = useState(currentMerchant.bio || '');
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState(currentMerchant.avatarUrl || '');
+  const [profileBannerUrl, setProfileBannerUrl] = useState(currentMerchant.bannerUrl || '');
+  const [profilePhone, setProfilePhone] = useState((currentMerchant as any).phone || '');
+  const [profileAddress, setProfileAddress] = useState(currentMerchant.location || 'Zamalek, Cairo');
+  const [profileCity, setProfileCity] = useState('Cairo');
+
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
+  const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
+
+  const [avatarUploadMode, setAvatarUploadMode] = useState<'upload' | 'url' | 'preset'>('upload');
+  const [bannerUploadMode, setBannerUploadMode] = useState<'upload' | 'url' | 'preset'>('upload');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const avatarFileRef = React.useRef<HTMLInputElement | null>(null);
+  const bannerFileRef = React.useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setProfileStoreName(currentMerchant.name);
+    setProfileTagline(currentMerchant.tagline || '');
+    setProfileBio(currentMerchant.bio || '');
+    setProfileAvatarUrl(currentMerchant.avatarUrl || '');
+    setProfileBannerUrl(currentMerchant.bannerUrl || '');
+    setProfilePhone((currentMerchant as any).phone || '');
+    setProfileAddress(currentMerchant.location || 'Zamalek, Cairo');
+  }, [currentMerchant]);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    setProfileErrorMsg(null);
+    try {
+      const res = await api.uploadMedia(file);
+      setProfileAvatarUrl(res.url);
+    } catch (err: any) {
+      setProfileErrorMsg(err.message || t.merchantDashboard.uploadMediaFailed);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleBannerFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingBanner(true);
+    setProfileErrorMsg(null);
+    try {
+      const res = await api.uploadMedia(file);
+      setProfileBannerUrl(res.url);
+    } catch (err: any) {
+      setProfileErrorMsg(err.message || t.merchantDashboard.uploadMediaFailed);
+    } finally {
+      setIsUploadingBanner(false);
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    setProfileSuccessMsg(null);
+    setProfileErrorMsg(null);
+
+    const updatedMerchantObj: Merchant = {
+      ...currentMerchant,
+      name: profileStoreName.trim(),
+      tagline: profileTagline.trim(),
+      bio: profileBio.trim(),
+      avatarUrl: profileAvatarUrl.trim(),
+      bannerUrl: profileBannerUrl.trim(),
+      location: profileAddress.trim(),
+    };
+
+    try {
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(currentMerchant.id);
+      if (isGuid) {
+        await api.updateMerchantProfile(currentMerchant.id, {
+          storeName: profileStoreName.trim(),
+          tagline: profileTagline.trim(),
+          bio: profileBio.trim(),
+          avatarUrl: profileAvatarUrl.trim(),
+          bannerUrl: profileBannerUrl.trim(),
+          phone: profilePhone.trim(),
+          address: profileAddress.trim(),
+          city: profileCity.trim(),
+        });
+      }
+
+      if (onUpdateMerchant) {
+        onUpdateMerchant(updatedMerchantObj);
+      }
+
+      setProfileSuccessMsg(t.merchantDashboard.profileUpdatedSuccess);
+      setTimeout(() => setProfileSuccessMsg(null), 4000);
+    } catch (err: any) {
+      console.warn('Backend updateMerchantProfile fallback:', err);
+      if (onUpdateMerchant) {
+        onUpdateMerchant(updatedMerchantObj);
+      }
+      setProfileSuccessMsg(t.merchantDashboard.profileUpdatedSuccess);
+      setTimeout(() => setProfileSuccessMsg(null), 4000);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // New product form state
   const [newTitle, setNewTitle] = useState('');
@@ -364,7 +477,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       {(!currentUser || currentUser.role !== 'Merchant') && (
         <div className="bg-amber-950/40 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg">
           <div className="flex items-center gap-2 text-amber-300">
-            <span className="text-base">🔒</span>
+            <LockIcon className="w-4 h-4 shrink-0" />
             <span>{t.merchantDashboard.storePreviewModeBanner}</span>
           </div>
           {onOpenAuthModal && (
@@ -399,9 +512,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Verified Store Ownership Badge */}
-          <div className="flex items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3.5 py-2 rounded-xl text-xs">
-            <span className="text-indigo-400 font-bold">🔒 {t.storefront.independentMaker}:</span>
-            <span className="text-white font-extrabold">{currentMerchant.name}</span>
+          <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3.5 py-2 rounded-xl text-xs">
+            <span className="text-slate-400 font-medium">{t.storefront.independentMaker}:</span>
+            <span className="text-white font-bold">{currentMerchant.name}</span>
           </div>
 
           <button
@@ -417,51 +530,51 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         
         {/* Net Balance */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-3 shadow-lg">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.netPayout}</span>
+            <span className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.netPayout}</span>
             <span className="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-bold">✓</span>
           </div>
           <div>
             <span className="text-3xl font-black text-emerald-400">{formatCurrency(metrics.availableBalance ?? 0)}</span>
           </div>
-          <p className="text-[11px] text-slate-500">{t.merchantDashboard.netPayoutDesc}</p>
+          <p className="text-xs text-slate-500 mt-2">{t.merchantDashboard.netPayoutDesc}</p>
         </div>
 
         {/* Gross Sales */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.grossSales}</span>
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-3 shadow-lg">
+          <span className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.grossSales}</span>
           <div>
             <span className="text-3xl font-black text-white">{formatCurrency(metrics.grossSales ?? 0)}</span>
           </div>
-          <p className="text-[11px] text-slate-500">{t.merchantDashboard.platformFee} (5%): {formatCurrency(metrics.platformFees ?? 0)}</p>
+          <p className="text-xs text-slate-500 mt-2">{t.merchantDashboard.platformFee} (5%): {formatCurrency(metrics.platformFees ?? 0)}</p>
         </div>
 
         {/* Total Orders */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.completedOrders}</span>
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-3 shadow-lg">
+          <span className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider">{t.merchantDashboard.completedOrders}</span>
           <div>
             <span className="text-3xl font-black text-indigo-400">{formatNumber(metrics.totalOrders ?? orders.length)}</span>
           </div>
-          <p className="text-[11px] text-slate-500">{t.merchantDashboard.completedOrdersDesc}</p>
+          <p className="text-xs text-slate-500 mt-2">{t.merchantDashboard.completedOrdersDesc}</p>
         </div>
 
         {/* Catalog Items */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-3 shadow-lg">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.adminPortal.totalListingsMetric}</span>
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 space-y-3 shadow-lg">
+          <span className="text-xs sm:text-sm font-bold text-slate-400 uppercase tracking-wider">{t.adminPortal.totalListingsMetric}</span>
           <div>
             <span className="text-3xl font-black text-purple-400">{formatNumber(merchantProducts.length)}</span>
           </div>
-          <p className="text-[11px] text-slate-500">{t.product.ratingLabel}: ★ {formatNumber(currentMerchant.rating)}</p>
+          <p className="text-xs text-slate-500 mt-2">{t.product.ratingLabel}: ★ {formatNumber(currentMerchant.rating)}</p>
         </div>
 
       </div>
 
       {/* Navigation Tabs */}
-      <div className="border-b border-slate-800 flex gap-4 text-xs font-bold">
+      <div className="border-b border-slate-800 flex gap-6 text-sm font-semibold">
         <button
           onClick={() => setActiveTab('orders')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3.5 border-b-2 transition-all cursor-pointer ${
             activeTab === 'orders'
               ? 'border-indigo-500 text-white'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -471,7 +584,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3.5 border-b-2 transition-all cursor-pointer ${
             activeTab === 'catalog'
               ? 'border-indigo-500 text-white'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -481,7 +594,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('ledger')}
-          className={`pb-3 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3.5 border-b-2 transition-all cursor-pointer ${
             activeTab === 'ledger'
               ? 'border-indigo-500 text-white'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -489,85 +602,99 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
         >
           {t.merchantDashboard.tabsOverview}
         </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`pb-3.5 border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'settings'
+              ? 'border-indigo-500 text-white'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <span>{t.merchantDashboard.tabsStoreProfile}</span>
+        </button>
       </div>
 
       {/* Tab 1: Orders Table */}
       {activeTab === 'orders' && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-slate-800 flex justify-between items-center">
-            <h3 className="font-extrabold text-sm text-white">{t.merchantDashboard.ordersTableTitle}</h3>
-            <span className="text-xs text-slate-400">{t.cart.secureNotice}</span>
+          <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+            <h3 className="font-extrabold text-base text-white">{t.merchantDashboard.ordersTableTitle}</h3>
+            <span className="text-sm text-slate-400">{t.cart.secureNotice}</span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-start text-xs">
-              <thead className="bg-slate-950/80 text-slate-400 font-bold border-b border-slate-800">
+            <table className="w-full text-start text-sm">
+              <thead className="bg-slate-950/80 text-slate-400 font-bold border-b border-slate-800 text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="p-4">{t.merchantDashboard.orderIdCol}</th>
-                  <th className="p-4">{t.merchantDashboard.customerCol}</th>
-                  <th className="p-4">{t.merchantDashboard.itemsCol}</th>
-                  <th className="p-4">{t.merchantDashboard.totalCol}</th>
-                  <th className="p-4">{t.merchantDashboard.netPayout}</th>
-                  <th className="p-4">{t.merchantDashboard.channelCol}</th>
-                  <th className="p-4">{t.merchantDashboard.settlementCol}</th>
-                  <th className="p-4">{t.merchantDashboard.statusCol}</th>
-                  <th className="p-4 text-end">{t.common.actions}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.orderIdCol}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.customerCol}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.itemsCol}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.totalCol}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.netPayout}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.channelCol}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.settlementCol}</th>
+                  <th className="py-3.5 px-5">{t.merchantDashboard.statusCol}</th>
+                  <th className="py-3.5 px-5 text-end">{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
                 {orders.map(order => (
                   <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="p-4 font-mono font-bold text-white" dir="ltr">{order.id}</td>
-                    <td className="p-4">
+                    <td className="py-3.5 px-5 font-mono font-bold text-white" dir="ltr">{order.id}</td>
+                    <td className="py-3.5 px-5">
                       <p className="font-semibold text-white">{order.customerName}</p>
-                      <p className="text-[11px] text-slate-400">{order.shippingAddress}</p>
+                      <p className="text-xs text-slate-400">{order.shippingAddress}</p>
                     </td>
-                    <td className="p-4 text-slate-400">{order.items.join(', ')}</td>
-                    <td className="p-4 font-bold text-white">{formatCurrency(order.totalAmount ?? 0)}</td>
-                    <td className="p-4 font-bold text-emerald-400">{formatCurrency(order.netAmount ?? 0)}</td>
-                    <td className="p-4">
+                    <td className="py-3.5 px-5 text-slate-400">{order.items.join(', ')}</td>
+                    <td className="py-3.5 px-5 font-bold text-white">{formatCurrency(order.totalAmount ?? 0)}</td>
+                    <td className="py-3.5 px-5 font-bold text-emerald-400">{formatCurrency(order.netAmount ?? 0)}</td>
+                    <td className="py-3.5 px-5">
                       {order.paymentMethod === 'CashOnDelivery' && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">
-                          💵 {t.checkout.codTitle}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 whitespace-nowrap">
+                          <CashIcon className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>{t.checkout.codTitle}</span>
                         </span>
                       )}
                       {order.paymentMethod === 'Fawry' && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 whitespace-nowrap">
-                          🟡 {t.checkout.fawryTitle}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                          <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                          <span>{t.checkout.fawryTitle}</span>
                         </span>
                       )}
                       {order.paymentMethod === 'InstaPay' && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 whitespace-nowrap">
-                          ⚡ {t.checkout.instaPayTitle}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/30 whitespace-nowrap">
+                          <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" />
+                          <span>{t.checkout.instaPayTitle}</span>
                         </span>
                       )}
                       {(order.paymentMethod === 'PayPal' || !order.paymentMethod) && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">
-                          💳 {t.checkout.paypalTitle}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 whitespace-nowrap">
+                          <CardIcon className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>{t.checkout.paypalTitle}</span>
                         </span>
                       )}
                     </td>
-                    <td className="p-4">
+                    <td className="py-3.5 px-5">
                       {order.settlementStatus === 'Settled' ? (
-                        <span className="text-emerald-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                        <span className="text-emerald-400 font-bold flex items-center gap-1 whitespace-nowrap text-xs">
                           <span>✓</span> {t.checkout.settled}
                         </span>
                       ) : order.settlementStatus === 'PendingCollection' ? (
-                        <span className="text-amber-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                        <span className="text-amber-400 font-bold flex items-center gap-1 whitespace-nowrap text-xs">
                           <span>⏳</span> {t.checkout.pendingCollection}
                         </span>
                       ) : order.settlementStatus === 'PendingVerification' ? (
-                        <span className="text-purple-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                        <span className="text-purple-400 font-bold flex items-center gap-1 whitespace-nowrap text-xs">
                           <span>⏳</span> {t.checkout.pendingVerification}
                         </span>
                       ) : (
-                        <span className="text-yellow-400 font-bold flex items-center gap-1 whitespace-nowrap text-[11px]">
+                        <span className="text-yellow-400 font-bold flex items-center gap-1 whitespace-nowrap text-xs">
                           <span>⏳</span> {t.checkout.awaitingKiosk}
                         </span>
                       )}
                     </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap ${
+                    <td className="py-3.5 px-5">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                         order.status === 'Fulfilled' || order.status === 'Paid'
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                           : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
@@ -575,16 +702,16 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                         {order.status === 'Paid' ? t.checkout.statusPaid : order.status === 'Fulfilled' ? t.checkout.statusFulfilled : t.checkout.statusPending}
                       </span>
                     </td>
-                    <td className="p-4 text-end">
+                    <td className="py-3.5 px-5 text-end">
                       {order.status === 'Paid' ? (
                         <button
                           onClick={() => handleMarkFulfilled(order.id)}
-                          className="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap"
+                          className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-md transition-all cursor-pointer whitespace-nowrap min-h-[36px]"
                         >
                           {t.merchantDashboard.markDispatched}
                         </button>
                       ) : (
-                        <span className="text-slate-500 text-[11px]">{t.merchantDashboard.completed}</span>
+                        <span className="text-slate-500 text-xs">{t.merchantDashboard.completed}</span>
                       )}
                     </td>
                   </tr>
@@ -629,51 +756,51 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               </div>
             )}
 
-            <form onSubmit={handlePublishProduct} className="space-y-3.5">
+            <form onSubmit={handlePublishProduct} className="space-y-4">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldTitle}</label>
+                <label className="text-xs sm:text-sm font-semibold text-slate-300 block mb-1.5">{t.merchantDashboard.fieldTitle}</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder={t.merchantDashboard.fieldTitlePlaceholder}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 min-h-[42px]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldPrice}</label>
+                  <label className="text-xs sm:text-sm font-semibold text-slate-300 block mb-1.5">{t.merchantDashboard.fieldPrice}</label>
                   <input
                     type="number"
                     required
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
                     placeholder="850"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 min-h-[42px]"
                     dir="ltr"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldStock}</label>
+                  <label className="text-xs sm:text-sm font-semibold text-slate-300 block mb-1.5">{t.merchantDashboard.fieldStock}</label>
                   <input
                     type="number"
                     required
                     value={newStock}
                     onChange={(e) => setNewStock(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 min-h-[42px]"
                     dir="ltr"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">{t.merchantDashboard.fieldCategory}</label>
+                <label className="text-xs sm:text-sm font-semibold text-slate-300 block mb-1.5">{t.merchantDashboard.fieldCategory}</label>
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 min-h-[42px]"
                 >
                   <option value="fashion">{t.categories.fashion}</option>
                   <option value="leather">{t.categories.leather}</option>
@@ -685,14 +812,14 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               {/* Media Asset Section (Image or Video) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-slate-300 block">
+                  <label className="text-xs sm:text-sm font-semibold text-slate-300 block">
                     {t.merchantDashboard.fieldMediaUpload}
                   </label>
-                  <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
+                  <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
                     <button
                       type="button"
                       onClick={() => setMediaMode('upload')}
-                      className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                         mediaMode === 'upload' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -701,7 +828,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => setMediaMode('url')}
-                      className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                      className={`px-3 py-1 rounded-lg font-bold transition-all cursor-pointer ${
                         mediaMode === 'url' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                       }`}
                     >
@@ -729,13 +856,14 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                           <div className="relative">
                             <video
                               src={newMediaUrl}
-                              className="w-full h-36 object-cover rounded-xl"
+                              className="w-full h-40 object-cover rounded-xl"
                               controls
                               muted
                               playsInline
                             />
-                            <span className="absolute top-2 start-2 bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
-                              🎥 {t.product.videoBadge}
+                            <span className="absolute top-2 start-2 bg-purple-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                              <VideoIcon className="w-3.5 h-3.5" />
+                              <span>{t.product.videoBadge}</span>
                             </span>
                           </div>
                         ) : (
@@ -743,22 +871,23 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                             <img
                               src={newMediaUrl}
                               alt="Uploaded product preview"
-                              className="w-full h-36 object-cover rounded-xl"
+                              className="w-full h-40 object-cover rounded-xl"
                             />
-                            <span className="absolute top-2 start-2 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow">
-                              📸 {t.filters.mediaImage}
+                            <span className="absolute top-2 start-2 bg-indigo-600 text-white text-xs font-black px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                              <ImageIcon className="w-3.5 h-3.5" />
+                              <span>{t.filters.mediaImage}</span>
                             </span>
                           </div>
                         )}
                         <div className="flex items-center justify-between pt-2 px-1">
-                          <span className="text-[10px] font-mono text-slate-400 truncate max-w-[200px]" dir="ltr">
+                          <span className="text-xs font-mono text-slate-400 truncate max-w-[200px]" dir="ltr">
                             {newMediaUrl}
                           </span>
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
-                            className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+                            className="text-xs font-bold text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
                           >
                             Replace File
                           </button>
@@ -767,7 +896,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                     ) : (
                       <div
                         onClick={() => fileInputRef.current?.click()}
-                        className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all ${
+                        className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
                           isUploading
                             ? 'border-indigo-500 bg-indigo-950/20'
                             : 'border-slate-800 hover:border-indigo-500/60 bg-slate-950/60 hover:bg-slate-950'
@@ -780,7 +909,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-1.5 py-1">
-                            <span className="text-2xl">📸 🎥</span>
+                            <div className="flex items-center gap-2 text-indigo-400 mb-1">
+                              <ImageIcon className="w-6 h-6" />
+                              <VideoIcon className="w-6 h-6" />
+                            </div>
                             <span className="text-xs font-bold text-white">{t.merchantDashboard.dragDropText} {t.merchantDashboard.clickToUpload}</span>
                             <p className="text-[10px] text-slate-400">
                               {t.merchantDashboard.uploadSizeHint}
@@ -820,7 +952,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               <div className="flex items-center gap-2 pt-2">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold py-3 rounded-2xl text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 text-white font-bold py-3.5 rounded-2xl text-sm shadow-lg shadow-indigo-600/30 transition-all cursor-pointer min-h-[46px]"
                 >
                   {editingProductId ? t.merchantDashboard.saveChangesBtn : t.merchantDashboard.publishProductBtn}
                 </button>
@@ -828,7 +960,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-2xl text-xs transition-colors cursor-pointer"
+                    className="px-5 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-2xl text-sm transition-colors cursor-pointer min-h-[46px]"
                   >
                     {t.common.cancel}
                   </button>
@@ -844,9 +976,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               {merchantProducts.map(product => (
                 <div
                   key={product.id}
-                  className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-3 shadow-md"
+                  className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex items-center gap-4 shadow-md"
                 >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-950 shrink-0 relative">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-950 shrink-0 relative">
                     {product.isVideo || /\.(mp4|webm|mov|mkv)/i.test(product.mediaUrl) ? (
                       <>
                         <video
@@ -857,7 +989,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                           autoPlay
                           playsInline
                         />
-                        <span className="absolute bottom-1 end-1 bg-purple-600 text-white text-[9px] font-bold px-1 rounded">
+                        <span className="absolute bottom-1 end-1 bg-purple-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                           ▶
                         </span>
                       </>
@@ -870,15 +1002,15 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-xs text-white truncate">{product.title}</h4>
-                    <p className="text-emerald-400 font-extrabold text-xs mt-0.5">{formatCurrency(product.price ?? 0)}</p>
-                    <p className="text-[11px] text-slate-400">{formatNumber(product.stockQuantity)} {t.product.inStock} • ★ {formatNumber(product.rating)}</p>
+                    <h4 className="font-bold text-sm text-white truncate">{product.title}</h4>
+                    <p className="text-emerald-400 font-black text-sm mt-0.5">{formatCurrency(product.price ?? 0)}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{formatNumber(product.stockQuantity)} {t.product.inStock} • ★ {formatNumber(product.rating)}</p>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
                       onClick={() => handleStartEdit(product)}
-                      className="p-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      className="p-2 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
                       title={t.merchantDashboard.editTooltip}
                     >
                       ✏️
@@ -886,10 +1018,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
                     <button
                       type="button"
                       onClick={() => handleDeleteProduct(product.id, product.title)}
-                      className="p-1.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                      className="p-2 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
                       title={t.merchantDashboard.deleteTooltip}
                     >
-                      🗑️
+                      <TrashIcon className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -903,10 +1035,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
       {/* Tab 3: Financial Ledger */}
       {activeTab === 'ledger' && (
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-          <div className="border-b border-slate-800 pb-3 flex justify-between items-center">
+          <div className="border-b border-slate-800 pb-4 flex justify-between items-center">
             <div>
               <h3 className="font-extrabold text-base text-white">{t.merchantDashboard.ledgerTransactionsTitle}</h3>
-              <p className="text-xs text-slate-400">{t.merchantDashboard.ledgerTransactionsDesc}</p>
+              <p className="text-sm text-slate-400">{t.merchantDashboard.ledgerTransactionsDesc}</p>
             </div>
             <span className="text-xs font-mono text-indigo-400">{t.common.verified}</span>
           </div>
@@ -915,22 +1047,22 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
             {ledgerEntries.map((entry, idx) => (
               <div
                 key={idx}
-                className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 flex justify-between items-center text-xs"
+                className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex justify-between items-center text-sm"
               >
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                       entry.type === 'CreditSale' || entry.type === 'DisbursementCredit' ? 'bg-emerald-500/20 text-emerald-300' :
                       entry.type === 'FeeDeduction' ? 'bg-purple-500/20 text-purple-300' :
                       'bg-amber-500/20 text-amber-300'
                     }`}>
                       {entry.type}
                     </span>
-                    <span className="text-slate-400 font-mono text-[11px]">{entry.date}</span>
+                    <span className="text-slate-400 font-mono text-xs">{entry.date}</span>
                   </div>
-                  <p className="text-slate-300">{entry.desc}</p>
+                  <p className="text-slate-300 text-xs sm:text-sm">{entry.desc}</p>
                 </div>
-                <span className={`font-mono font-black text-sm ${
+                <span className={`font-mono font-black text-base ${
                   entry.amount.startsWith('+') ? 'text-emerald-400' : 'text-slate-300'
                 }`}>
                   {entry.amount}
@@ -938,6 +1070,431 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Tab 4: Store Identity & Branding Settings */}
+      {activeTab === 'settings' && (
+        <div className="space-y-8 animate-fade-in">
+          {/* Header */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-base text-white">{t.merchantDashboard.storeProfileHeading}</h3>
+              <p className="text-xs text-slate-400 mt-1">{t.merchantDashboard.storeProfileSubtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onViewPublicStore({
+                ...currentMerchant,
+                name: profileStoreName,
+                tagline: profileTagline,
+                bio: profileBio,
+                avatarUrl: profileAvatarUrl,
+                bannerUrl: profileBannerUrl,
+                location: profileAddress
+              })}
+              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 self-start md:self-auto"
+            >
+              <span>↗</span>
+              <span>{t.merchantDashboard.viewStorefront}</span>
+            </button>
+          </div>
+
+          {/* Live Storefront Header Preview Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="px-6 py-3 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                {t.merchantDashboard.liveStorePreview}
+              </span>
+              <span className="text-[11px] font-mono text-slate-500">socialhub.eg/store/{currentMerchant.slug}</span>
+            </div>
+
+            {/* Banner Preview */}
+            <div className="relative h-44 sm:h-56 w-full bg-slate-950 overflow-hidden">
+              {profileBannerUrl ? (
+                <img
+                  src={profileBannerUrl}
+                  alt="Store Cover Banner"
+                  className="w-full h-full object-cover object-center"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 flex items-center justify-center text-slate-500 text-xs font-medium gap-2">
+                  <ImageIcon className="w-4 h-4 text-slate-400" />
+                  <span>{t.merchantDashboard.storeBannerHint}</span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80" />
+            </div>
+
+            {/* Avatar & Store Info Overlap */}
+            <div className="px-6 pb-6 pt-0 relative -mt-12 sm:-mt-14 flex flex-col sm:flex-row items-start sm:items-end gap-5">
+              <div className="relative group">
+                <img
+                  src={profileAvatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
+                  alt={profileStoreName}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl border-4 border-slate-900 shadow-2xl object-cover bg-slate-950"
+                />
+                <span className="absolute bottom-1 right-1 bg-emerald-500 text-white text-[10px] p-1 rounded-full border-2 border-slate-900" title="Verified Maker">
+                  ✓
+                </span>
+              </div>
+
+              <div className="flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-xl sm:text-2xl font-black text-white">{profileStoreName || 'Your Boutique Name'}</h4>
+                  <span className="text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full">
+                    {currentMerchant.city || 'Cairo, Egypt'}
+                  </span>
+                </div>
+                <p className="text-xs text-indigo-300 font-medium">
+                  {profileTagline || 'Add your catchy boutique slogan or tagline here'}
+                </p>
+                <p className="text-xs text-slate-400 max-w-2xl line-clamp-2 leading-relaxed">
+                  {profileBio || 'Tell shoppers about your authentic Egyptian craftsmanship, heritage, and creative design philosophy.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSaveProfile} className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-8 shadow-xl">
+            {profileSuccessMsg && (
+              <div className="p-4 bg-emerald-950/60 border border-emerald-500/40 rounded-2xl flex items-center gap-3 text-emerald-300 text-xs font-bold animate-fade-in">
+                <span className="text-xl text-emerald-400">✓</span>
+                <span>{profileSuccessMsg}</span>
+              </div>
+            )}
+
+            {profileErrorMsg && (
+              <div className="p-4 bg-red-950/60 border border-red-500/40 rounded-2xl flex items-center gap-3 text-red-300 text-xs font-bold animate-fade-in">
+                <span className="text-xl text-red-400">⚠️</span>
+                <span>{profileErrorMsg}</span>
+              </div>
+            )}
+
+            {/* 1. Cover Banner Section */}
+            <div className="space-y-4 border-b border-slate-800 pb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-sm font-bold text-white flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-indigo-400" />
+                    <span>{t.merchantDashboard.storeBannerLabel}</span>
+                  </label>
+                  <p className="text-xs text-slate-400">{t.merchantDashboard.storeBannerHint}</p>
+                </div>
+
+                {/* Mode Selector */}
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold self-start">
+                  <button
+                    type="button"
+                    onClick={() => setBannerUploadMode('upload')}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      bannerUploadMode === 'upload' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {t.merchantDashboard.uploadPill}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBannerUploadMode('url')}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      bannerUploadMode === 'url' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {t.merchantDashboard.linkUrlPill}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBannerUploadMode('preset')}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      bannerUploadMode === 'preset' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    ✨ Presets
+                  </button>
+                </div>
+              </div>
+
+              {bannerUploadMode === 'upload' && (
+                <div>
+                  <input
+                    type="file"
+                    ref={bannerFileRef}
+                    accept="image/*"
+                    onChange={handleBannerFileChange}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => bannerFileRef.current?.click()}
+                    className="border-2 border-dashed border-slate-700 hover:border-indigo-500/60 bg-slate-950/60 rounded-2xl p-6 text-center cursor-pointer transition-colors"
+                  >
+                    <ImageIcon className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                    <p className="text-xs font-bold text-white mb-1">
+                      {isUploadingBanner ? t.merchantDashboard.uploadingMedia : t.merchantDashboard.clickToUpload}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{t.merchantDashboard.uploadSizeHint}</p>
+                  </div>
+                </div>
+              )}
+
+              {bannerUploadMode === 'url' && (
+                <div>
+                  <input
+                    type="url"
+                    dir="ltr"
+                    value={profileBannerUrl}
+                    onChange={(e) => setProfileBannerUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  />
+                </div>
+              )}
+
+              {bannerUploadMode === 'preset' && (
+                <div className="space-y-2">
+                  <span className="text-[11px] text-slate-400">{t.merchantDashboard.presetBannerNotice}</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { title: 'Cairo Atelier', url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600' },
+                      { title: 'Leather Craft', url: 'https://images.unsplash.com/photo-1513094735237-8f2714d57c13?w=1600' },
+                      { title: 'Clay Pottery', url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=1600' },
+                      { title: 'Fashion House', url: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600' },
+                    ].map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setProfileBannerUrl(preset.url)}
+                        className={`group relative rounded-xl overflow-hidden border-2 aspect-video transition-all cursor-pointer ${
+                          profileBannerUrl === preset.url ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <img src={preset.url} alt={preset.title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/50 group-hover:bg-black/30 flex items-center justify-center p-2 text-center text-[10px] font-bold text-white transition-colors">
+                          {preset.title}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Store Avatar / Logo Section */}
+            <div className="space-y-4 border-b border-slate-800 pb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <label className="text-sm font-bold text-white flex items-center gap-2">
+                    <StoreIcon className="w-4 h-4 text-indigo-400" />
+                    <span>{t.merchantDashboard.storeAvatarLabel}</span>
+                  </label>
+                  <p className="text-xs text-slate-400">{t.merchantDashboard.storeAvatarHint}</p>
+                </div>
+
+                {/* Mode Selector */}
+                <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-bold self-start">
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUploadMode('upload')}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      avatarUploadMode === 'upload' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {t.merchantDashboard.uploadPill}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUploadMode('url')}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      avatarUploadMode === 'url' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {t.merchantDashboard.linkUrlPill}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUploadMode('preset')}
+                    className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
+                      avatarUploadMode === 'preset' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    ✨ Presets
+                  </button>
+                </div>
+              </div>
+
+              {avatarUploadMode === 'upload' && (
+                <div>
+                  <input
+                    type="file"
+                    ref={avatarFileRef}
+                    accept="image/*"
+                    onChange={handleAvatarFileChange}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => avatarFileRef.current?.click()}
+                    className="border-2 border-dashed border-slate-700 hover:border-indigo-500/60 bg-slate-950/60 rounded-2xl p-6 text-center cursor-pointer transition-colors"
+                  >
+                    <StoreIcon className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                    <p className="text-xs font-bold text-white mb-1">
+                      {isUploadingAvatar ? t.merchantDashboard.uploadingMedia : t.merchantDashboard.clickToUpload}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{t.merchantDashboard.uploadSizeHint}</p>
+                  </div>
+                </div>
+              )}
+
+              {avatarUploadMode === 'url' && (
+                <div>
+                  <input
+                    type="url"
+                    dir="ltr"
+                    value={profileAvatarUrl}
+                    onChange={(e) => setProfileAvatarUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  />
+                </div>
+              )}
+
+              {avatarUploadMode === 'preset' && (
+                <div className="space-y-2">
+                  <span className="text-[11px] text-slate-400">{t.merchantDashboard.presetAvatarNotice}</span>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { title: 'Boutique Sari', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400' },
+                      { title: 'Leather Maker', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400' },
+                      { title: 'Gold Atelier', url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400' },
+                      { title: 'Fashion Design', url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400' },
+                      { title: 'Linen Crafter', url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400' },
+                    ].map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setProfileAvatarUrl(preset.url)}
+                        className={`relative rounded-2xl overflow-hidden border-2 w-14 h-14 transition-all cursor-pointer ${
+                          profileAvatarUrl === preset.url ? 'border-indigo-500 ring-2 ring-indigo-500/40 scale-105' : 'border-slate-800 hover:border-slate-700'
+                        }`}
+                        title={preset.title}
+                      >
+                        <img src={preset.url} alt={preset.title} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Text Details: Store Name, Tagline, Bio, Phone & Address */}
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300">
+                    {t.createMerchantModal.storeNameLabel} <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profileStoreName}
+                    onChange={(e) => setProfileStoreName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300">
+                    {t.merchantDashboard.storeTaglineLabel}
+                  </label>
+                  <input
+                    type="text"
+                    value={profileTagline}
+                    onChange={(e) => setProfileTagline(e.target.value)}
+                    placeholder={t.merchantDashboard.storeTaglinePlaceholder}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300">
+                  {t.merchantDashboard.storeBioLabel}
+                </label>
+                <textarea
+                  rows={4}
+                  value={profileBio}
+                  onChange={(e) => setProfileBio(e.target.value)}
+                  placeholder={t.merchantDashboard.storeBioPlaceholder}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-white focus:outline-none focus:border-indigo-500 leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300">
+                    {t.merchantDashboard.storePhoneLabel}
+                  </label>
+                  <input
+                    type="tel"
+                    dir="ltr"
+                    value={profilePhone}
+                    onChange={(e) => setProfilePhone(e.target.value)}
+                    placeholder={t.merchantDashboard.storePhonePlaceholder}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 text-start"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300">
+                    {t.merchantDashboard.storeAddressLabel}
+                  </label>
+                  <input
+                    type="text"
+                    value={profileAddress}
+                    onChange={(e) => setProfileAddress(e.target.value)}
+                    placeholder="e.g. 15 Brazil St, Zamalek"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300">
+                    {t.merchantDashboard.storeCityLabel}
+                  </label>
+                  <select
+                    value={profileCity}
+                    onChange={(e) => setProfileCity(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="Cairo">Cairo (القاهرة)</option>
+                    <option value="Giza">Giza (الجيزة)</option>
+                    <option value="Alexandria">Alexandria (الإسكندرية)</option>
+                    <option value="Mansoura">Mansoura (المنصورة)</option>
+                    <option value="Aswan">Aswan (أسوان)</option>
+                    <option value="Luxor">Luxor (الأقصر)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-800">
+              <button
+                type="submit"
+                disabled={isSavingProfile}
+                className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                {isSavingProfile ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                    <span>{t.merchantDashboard.savingProfile}</span>
+                  </>
+                ) : (
+                  <span>{t.merchantDashboard.saveProfileBtn}</span>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

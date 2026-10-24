@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using SocialCommerce.Application.Common;
 using SocialCommerce.Application.DTOs;
 using SocialCommerce.Application.Interfaces;
@@ -50,6 +51,7 @@ public class MerchantsController : BaseApiController
     /// Retrieves storefront profile and products by slug (Public)
     /// </summary>
     [HttpGet("{slug}")]
+    [OutputCache(Duration = 60)]
     [ProducesResponseType(typeof(ApiResponse<MerchantDetailsDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ApiResponse<MerchantDetailsDto>>> GetMerchantBySlug(
@@ -63,6 +65,55 @@ public class MerchantsController : BaseApiController
         }
 
         return Success(merchant, "Merchant storefront retrieved successfully.");
+    }
+
+    /// <summary>
+    /// Retrieves merchant profile by ID
+    /// </summary>
+    [HttpGet("id/{merchantId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<MerchantDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<MerchantDto>>> GetMerchantById(
+        Guid merchantId,
+        CancellationToken ct = default)
+    {
+        var merchant = await _catalogService.GetMerchantByIdAsync(merchantId, ct);
+        if (merchant == null)
+        {
+            return Failed<MerchantDto>("Merchant store not found.", "Not Found", StatusCodes.Status404NotFound);
+        }
+
+        return Success(merchant, "Merchant profile retrieved successfully.");
+    }
+
+    /// <summary>
+    /// Updates merchant storefront profile, banner, avatar, bio, and contact info (Merchant Store Owner Only)
+    /// </summary>
+    [Authorize(Roles = "Merchant")]
+    [HttpPut("{merchantId:guid}")]
+    [ProducesResponseType(typeof(ApiResponse<MerchantDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<MerchantDto>>> UpdateMerchantProfile(
+        Guid merchantId,
+        [FromBody] UpdateMerchantProfileRequest request,
+        CancellationToken ct = default)
+    {
+        if (!IsAuthorizedForMerchant(merchantId))
+        {
+            return Failed<MerchantDto>("Access denied. Only the store owner can edit this boutique profile.", "Forbidden", StatusCodes.Status403Forbidden);
+        }
+
+        try
+        {
+            var updated = await _catalogService.UpdateMerchantProfileAsync(merchantId, request, ct);
+            return Success(updated, "Merchant storefront profile updated successfully.");
+        }
+        catch (ArgumentException ex)
+        {
+            return Failed<MerchantDto>(ex.Message, "Bad Request", StatusCodes.Status400BadRequest);
+        }
     }
 
     /// <summary>

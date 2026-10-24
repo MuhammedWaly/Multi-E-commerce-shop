@@ -190,7 +190,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
 
         {/* Modal Header */}
         <div className="flex items-center gap-4 border-b border-slate-800 pb-5">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-2xl font-black text-white shadow-lg overflow-hidden shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-xl font-bold text-white shadow overflow-hidden shrink-0">
             {avatarUrl ? (
               <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover" />
             ) : (
@@ -224,13 +224,13 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               setErrorMsg(null);
               setSuccessMsg(null);
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-2 ${
               activeTab === 'profile'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>👤 {t.accountSettings.tabProfile}</span>
+            <span>{t.accountSettings.tabProfile}</span>
           </button>
 
           <button
@@ -239,13 +239,13 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               setErrorMsg(null);
               setSuccessMsg(null);
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-2 ${
               activeTab === 'password'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>🔑 {t.accountSettings.tabPassword}</span>
+            <span>{t.accountSettings.tabPassword}</span>
           </button>
 
           <button
@@ -254,13 +254,13 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               setErrorMsg(null);
               setSuccessMsg(null);
             }}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer flex items-center gap-2 ${
               activeTab === 'email'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                ? 'bg-indigo-600 text-white'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <span>✉️ {t.accountSettings.tabEmail}</span>
+            <span>{t.accountSettings.tabEmail}</span>
             {isConfirmed ? (
               <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
             ) : (
@@ -370,7 +370,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
@@ -460,7 +460,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
@@ -478,8 +478,20 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
         {/* TAB 3: Email Verification */}
         {!isFetching && activeTab === 'email' && (
           <div className="space-y-6">
-            <div className="p-4 rounded-2xl border bg-slate-950 flex items-start gap-3.5">
-              <span className="text-2xl">{isConfirmed ? '🛡️' : '⏳'}</span>
+            <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950 flex items-start gap-3.5">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                isConfirmed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+              }`}>
+                {isConfirmed ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
               <div className="space-y-1">
                 <h4 className="text-xs font-bold text-white">
                   {isConfirmed ? t.accountSettings.verifiedStatus : t.accountSettings.unverifiedStatus}

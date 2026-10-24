@@ -14,13 +14,28 @@ public class Order
     public decimal TotalAmount { get; private set; }
     public decimal PlatformFeeAmount { get; private set; }
     public decimal MerchantNetAmount { get; private set; }
+    public decimal ShippingFee { get; private set; }
+    public double DistanceKm { get; private set; }
+    public int EstimatedDeliveryMinutes { get; private set; }
+    public double? DeliveryLatitude { get; private set; }
+    public double? DeliveryLongitude { get; private set; }
     public string? PaymentOrderId { get; private set; }
     public string? PaymentTransactionId { get; private set; }
-    public string PaymentMethod { get; private set; } = "PayPal";
+    private string _paymentMethod = "PayPal";
+    public string PaymentMethod
+    {
+        get => _paymentMethod ?? "PayPal";
+        private set => _paymentMethod = string.IsNullOrWhiteSpace(value) ? "PayPal" : value.Trim();
+    }
     public string? PaymentReference { get; private set; }
     public string? PaymentInstructions { get; private set; }
     public DateTime? PaymentExpiresAtUtc { get; private set; }
     public string? SenderWalletOrReference { get; private set; }
+    public string? CustomerPhone { get; private set; }
+    public string? BuildingDetails { get; private set; }
+    public string? PromoCode { get; private set; }
+    public decimal DiscountAmount { get; private set; }
+    public bool IsPhoneVerified { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime? PaidAtUtc { get; private set; }
 
@@ -41,7 +56,12 @@ public class Order
         string? paymentReference = null,
         string? paymentInstructions = null,
         DateTime? paymentExpiresAtUtc = null,
-        string? senderWalletOrReference = null)
+        string? senderWalletOrReference = null,
+        double? deliveryLatitude = null,
+        double? deliveryLongitude = null,
+        decimal shippingFee = 0m,
+        double distanceKm = 0,
+        int estimatedDeliveryMinutes = 0)
     {
         if (merchantId == Guid.Empty)
             throw new ArgumentException("Merchant ID cannot be empty.", nameof(merchantId));
@@ -73,6 +93,11 @@ public class Order
         PaymentInstructions = paymentInstructions?.Trim();
         PaymentExpiresAtUtc = paymentExpiresAtUtc;
         SenderWalletOrReference = senderWalletOrReference?.Trim();
+        DeliveryLatitude = deliveryLatitude;
+        DeliveryLongitude = deliveryLongitude;
+        ShippingFee = shippingFee >= 0 ? shippingFee : 0m;
+        DistanceKm = distanceKm >= 0 ? distanceKm : 0;
+        EstimatedDeliveryMinutes = estimatedDeliveryMinutes >= 0 ? estimatedDeliveryMinutes : 0;
 
         if (initialStatus.HasValue)
         {
@@ -99,9 +124,48 @@ public class Order
 
     private void CalculateTotals()
     {
-        TotalAmount = _items.Sum(i => i.Subtotal);
-        PlatformFeeAmount = Math.Round(TotalAmount * PlatformFeeRate, 2);
+        var rawSubtotal = _items.Sum(i => i.Subtotal);
+        var discountedSubtotal = Math.Max(0m, rawSubtotal - DiscountAmount);
+        PlatformFeeAmount = Math.Round(discountedSubtotal * PlatformFeeRate, 2);
+        TotalAmount = discountedSubtotal + ShippingFee;
         MerchantNetAmount = TotalAmount - PlatformFeeAmount;
+    }
+
+    public void ApplyPromoCode(string promoCode, decimal discountAmount)
+    {
+        PromoCode = promoCode?.Trim().ToUpperInvariant();
+        DiscountAmount = Math.Max(0m, discountAmount);
+        CalculateTotals();
+    }
+
+    public void SetCustomerContact(string? phone, string? buildingDetails, bool isPhoneVerified = false)
+    {
+        CustomerPhone = phone?.Trim();
+        BuildingDetails = buildingDetails?.Trim();
+        IsPhoneVerified = isPhoneVerified;
+    }
+
+    public void MarkPhoneVerified(bool verified = true)
+    {
+        IsPhoneVerified = verified;
+    }
+
+    public void UpdateDeliveryTracking(double? latitude, double? longitude, decimal shippingFee, double distanceKm, int estimatedMinutes)
+    {
+        DeliveryLatitude = latitude;
+        DeliveryLongitude = longitude;
+        ShippingFee = Math.Max(0m, shippingFee);
+        DistanceKm = Math.Max(0, distanceKm);
+        EstimatedDeliveryMinutes = Math.Max(0, estimatedMinutes);
+        CalculateTotals();
+    }
+
+    public void UpdateStatus(OrderStatus newStatus)
+    {
+        if (Status == OrderStatus.Fulfilled && newStatus != OrderStatus.Fulfilled)
+            throw new InvalidOperationException("Fulfilled orders cannot transition back.");
+
+        Status = newStatus;
     }
 
     public void AssignPaymentOrderId(string paymentOrderId)

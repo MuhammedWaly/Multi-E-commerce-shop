@@ -9,14 +9,26 @@ namespace SocialCommerce.Infrastructure.Services;
 public class CatalogService : ICatalogService
 {
     private readonly SocialCommerceDbContext _db;
+    private readonly ICacheService? _cache;
 
-    public CatalogService(SocialCommerceDbContext db)
+    public CatalogService(SocialCommerceDbContext db, ICacheService? cache = null)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task<IReadOnlyList<FeedItemDto>> GetFeedAsync(int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
+        var cacheKey = $"feed:p{page}:s{pageSize}";
+        if (_cache != null)
+        {
+            var cachedFeed = await _cache.GetAsync<IReadOnlyList<FeedItemDto>>(cacheKey, ct);
+            if (cachedFeed != null)
+            {
+                return cachedFeed;
+            }
+        }
+
         var query = from p in _db.Products.AsNoTracking()
                     join m in _db.Merchants.AsNoTracking() on p.MerchantId equals m.Id
                     orderby p.CreatedAtUtc descending
@@ -33,10 +45,17 @@ public class CatalogService : ICatalogService
                         p.StockQuantity
                     );
 
-        return await query
+        var feed = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
+
+        if (_cache != null && feed.Count > 0)
+        {
+            await _cache.SetAsync(cacheKey, (IReadOnlyList<FeedItemDto>)feed, TimeSpan.FromMinutes(5), ct);
+        }
+
+        return feed;
     }
 
     public async Task<MerchantDto> CreateMerchantAsync(CreateMerchantRequest request, CancellationToken ct = default)
@@ -50,6 +69,11 @@ public class CatalogService : ICatalogService
         var merchant = new Merchant(request.StoreName, request.Slug, request.Email);
         _db.Merchants.Add(merchant);
         await _db.SaveChangesAsync(ct);
+        if (_cache != null)
+        {
+            await _cache.RemoveByPrefixAsync("merchant:");
+            await _cache.RemoveByPrefixAsync("feed:");
+        }
 
         return new MerchantDto(
             merchant.Id,
@@ -58,15 +82,112 @@ public class CatalogService : ICatalogService
             merchant.Email,
             merchant.Balance,
             merchant.IsActive,
-            merchant.CreatedAtUtc
+            merchant.CreatedAtUtc,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
+        );
+    }
+
+    public async Task<MerchantDto?> GetMerchantByIdAsync(Guid merchantId, CancellationToken ct = default)
+    {
+        var merchant = await _db.Merchants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == merchantId, ct);
+
+        if (merchant == null)
+            return null;
+
+        return new MerchantDto(
+            merchant.Id,
+            merchant.StoreName,
+            merchant.Slug,
+            merchant.Email,
+            merchant.Balance,
+            merchant.IsActive,
+            merchant.CreatedAtUtc,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
+        );
+    }
+
+    public async Task<MerchantDto> UpdateMerchantProfileAsync(Guid merchantId, UpdateMerchantProfileRequest request, CancellationToken ct = default)
+    {
+        var merchant = await _db.Merchants.FirstOrDefaultAsync(m => m.Id == merchantId, ct);
+        if (merchant == null)
+        {
+            throw new ArgumentException("Merchant store not found.", nameof(merchantId));
+        }
+
+        merchant.UpdateProfile(
+            request.StoreName,
+            request.Tagline,
+            request.Bio,
+            request.AvatarUrl,
+            request.BannerUrl,
+            request.Phone,
+            request.Address,
+            request.City,
+            request.Latitude,
+            request.Longitude
+        );
+
+        await _db.SaveChangesAsync(ct);
+        if (_cache != null)
+        {
+            await _cache.RemoveByPrefixAsync("merchant:");
+            await _cache.RemoveByPrefixAsync("feed:");
+        }
+
+        return new MerchantDto(
+            merchant.Id,
+            merchant.StoreName,
+            merchant.Slug,
+            merchant.Email,
+            merchant.Balance,
+            merchant.IsActive,
+            merchant.CreatedAtUtc,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
         );
     }
 
     public async Task<MerchantDetailsDto?> GetMerchantBySlugAsync(string slug, CancellationToken ct = default)
     {
+        var normalizedSlug = slug.ToLowerInvariant();
+        var cacheKey = $"merchant:slug:{normalizedSlug}";
+        if (_cache != null)
+        {
+            var cached = await _cache.GetAsync<MerchantDetailsDto>(cacheKey, ct);
+            if (cached != null)
+            {
+                return cached;
+            }
+        }
+
         var merchant = await _db.Merchants
             .AsNoTracking()
-            .FirstOrDefaultAsync(m => m.Slug == slug.ToLowerInvariant(), ct);
+            .FirstOrDefaultAsync(m => m.Slug == normalizedSlug, ct);
 
         if (merchant == null)
             return null;
@@ -87,7 +208,7 @@ public class CatalogService : ICatalogService
             ))
             .ToListAsync(ct);
 
-        return new MerchantDetailsDto(
+        var result = new MerchantDetailsDto(
             merchant.Id,
             merchant.StoreName,
             merchant.Slug,
@@ -95,8 +216,24 @@ public class CatalogService : ICatalogService
             merchant.Balance,
             merchant.IsActive,
             merchant.CreatedAtUtc,
-            products
+            products,
+            merchant.Tagline,
+            merchant.Bio,
+            merchant.AvatarUrl,
+            merchant.BannerUrl,
+            merchant.Phone,
+            merchant.Address,
+            merchant.City,
+            merchant.Latitude,
+            merchant.Longitude
         );
+
+        if (_cache != null)
+        {
+            await _cache.SetAsync(cacheKey, result, TimeSpan.FromMinutes(10), ct);
+        }
+
+        return result;
     }
 
     public async Task<ProductDto> AddProductAsync(Guid merchantId, AddProductRequest request, CancellationToken ct = default)
@@ -110,6 +247,11 @@ public class CatalogService : ICatalogService
         var product = new Product(merchantId, request.Title, request.Price, request.MediaUrl, request.IsVideo, request.StockQuantity);
         _db.Products.Add(product);
         await _db.SaveChangesAsync(ct);
+        if (_cache != null)
+        {
+            await _cache.RemoveByPrefixAsync("merchant:");
+            await _cache.RemoveByPrefixAsync("feed:");
+        }
 
         return new ProductDto(
             product.Id,
@@ -138,6 +280,11 @@ public class CatalogService : ICatalogService
 
         product.UpdateDetails(request.Title, request.Price, request.MediaUrl, request.IsVideo, request.StockQuantity);
         await _db.SaveChangesAsync(ct);
+        if (_cache != null)
+        {
+            await _cache.RemoveByPrefixAsync("merchant:");
+            await _cache.RemoveByPrefixAsync("feed:");
+        }
 
         return new ProductDto(
             product.Id,
@@ -161,6 +308,11 @@ public class CatalogService : ICatalogService
 
         _db.Products.Remove(product);
         await _db.SaveChangesAsync(ct);
+        if (_cache != null)
+        {
+            await _cache.RemoveByPrefixAsync("merchant:");
+            await _cache.RemoveByPrefixAsync("feed:");
+        }
         return true;
     }
 

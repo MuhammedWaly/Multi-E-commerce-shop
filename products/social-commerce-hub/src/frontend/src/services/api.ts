@@ -16,6 +16,7 @@ export interface UserDto {
   merchantId?: string;
   storeSlug?: string;
   isEmailConfirmed?: boolean;
+  phoneNumber?: string;
 }
 
 export interface UserProfileDto {
@@ -85,13 +86,35 @@ export interface FeedItemDto {
   rating: number;
 }
 
+export interface UpdateMerchantProfileRequest {
+  storeName: string;
+  tagline?: string;
+  bio?: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface MerchantDto {
   id: string;
   storeName: string;
   slug: string;
   email: string;
   isActive: boolean;
-  createdAt: string;
+  createdAt?: string;
+  tagline?: string;
+  bio?: string;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface ProductDto {
@@ -145,6 +168,17 @@ export interface OrderDto {
   fawryExpiryDate?: string;
   senderMobileOrWallet?: string;
   senderReferenceNumber?: string;
+  shippingFee?: number;
+  distanceKm?: number;
+  estimatedDeliveryMinutes?: number;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  formattedEta?: string;
+  customerPhone?: string;
+  buildingDetails?: string;
+  promoCode?: string;
+  discountAmount?: number;
+  isPhoneVerified?: boolean;
   createdAt: string;
   items: OrderItemDto[];
 }
@@ -274,7 +308,84 @@ export interface CreateOrderRequest {
     senderMobileOrWallet?: string;
     senderReferenceNumber?: string;
   };
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  customerPhone?: string;
+  buildingDetails?: string;
+  promoCode?: string;
+  isPhoneVerified?: boolean;
   items: { productId: string; quantity: number }[];
+}
+
+export interface SendPhoneOtpResponse {
+  success: boolean;
+  phoneNumber: string;
+  message: string;
+  demoCode?: string;
+}
+
+export interface VerifyPhoneOtpResponse {
+  success: boolean;
+  phoneNumber: string;
+  message: string;
+}
+
+export interface ValidatePromoRequest {
+  code: string;
+  itemsSubtotal: number;
+}
+
+export interface ValidatePromoResponse {
+  isValid: boolean;
+  code: string;
+  discountAmount: number;
+  description: string;
+  errorMessage?: string;
+}
+
+export interface OrderTrackLookupRequest {
+  orderIdentifier: string;
+  contactInfo: string;
+}
+
+export interface ShippingCalculationRequest {
+  merchantId: string;
+  customerLatitude: number;
+  customerLongitude: number;
+}
+
+export interface ShippingCalculationResponse {
+  distanceKm: number;
+  shippingFee: number;
+  estimatedDeliveryMinutes: number;
+  formattedEta: string;
+  storeLatitude: number;
+  storeLongitude: number;
+  storeAddress: string;
+  storeCity: string;
+  customerLatitude: number;
+  customerLongitude: number;
+}
+
+export interface OrderTrackingResponse {
+  orderId: string;
+  status: string;
+  customerName: string;
+  shippingAddress: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  distanceKm: number;
+  shippingFee: number;
+  estimatedDeliveryMinutes: number;
+  formattedEta: string;
+  storeName: string;
+  storeAddress: string;
+  storeCity: string;
+  storeLatitude: number;
+  storeLongitude: number;
+  createdAtUtc: string;
+  timelineSteps: string[];
+  currentStepIndex: number;
 }
 
 export interface CaptureOrderResult {
@@ -285,7 +396,31 @@ export interface CaptureOrderResult {
   errorMessage?: string;
 }
 
-const API_BASE = '/api';
+// Dynamic API Base URL resolution:
+// In production on Vercel, reads from import.meta.env.VITE_API_URL (e.g. https://social-commerce-backend.onrender.com).
+// In local development, falls back to relative '/api' which is transparently handled by Vite proxy.
+const RAW_VITE_API_URL = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
+  ? String(import.meta.env.VITE_API_URL).trim().replace(/\/+$/, '')
+  : '';
+
+export const API_BASE = RAW_VITE_API_URL ? `${RAW_VITE_API_URL}/api` : '/api';
+export const BACKEND_ROOT = RAW_VITE_API_URL || '';
+
+/**
+ * Ensures media URLs pointing to backend /uploads paths resolve correctly
+ * regardless of whether the frontend is served locally or on a separate Vercel domain.
+ */
+export function resolveMediaUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  if (url.startsWith('/') && BACKEND_ROOT) {
+    return `${BACKEND_ROOT}${url}`;
+  }
+  return url;
+}
+
 const TOKEN_KEY = 'socialhub_auth_token';
 const USER_KEY = 'socialhub_auth_user';
 
@@ -377,7 +512,11 @@ export const api = {
 
   // Discovery Feed
   async getFeed(page = 1, pageSize = 20): Promise<FeedItemDto[]> {
-    return request<FeedItemDto[]>(`/feed?page=${page}&pageSize=${pageSize}`);
+    const items = await request<FeedItemDto[]>(`/feed?page=${page}&pageSize=${pageSize}`);
+    return items.map((item) => ({
+      ...item,
+      mediaUrl: resolveMediaUrl(item.mediaUrl),
+    }));
   },
 
   // Merchants & Stores
@@ -389,7 +528,25 @@ export const api = {
   },
 
   async getMerchantBySlug(slug: string): Promise<MerchantDetailsDto> {
-    return request<MerchantDetailsDto>(`/merchants/${slug}`);
+    const res = await request<MerchantDetailsDto>(`/merchants/${slug}`);
+    return {
+      ...res,
+      products: (res.products || []).map((p) => ({
+        ...p,
+        mediaUrl: resolveMediaUrl(p.mediaUrl),
+      })),
+    };
+  },
+
+  async getMerchantById(merchantId: string): Promise<MerchantDto> {
+    return request<MerchantDto>(`/merchants/id/${merchantId}`);
+  },
+
+  async updateMerchantProfile(merchantId: string, data: UpdateMerchantProfileRequest): Promise<MerchantDto> {
+    return request<MerchantDto>(`/merchants/${merchantId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 
   async addProduct(merchantId: string, data: {
@@ -442,6 +599,45 @@ export const api = {
   },
 
   // Orders & Checkout
+  async calculateShipping(data: ShippingCalculationRequest): Promise<ShippingCalculationResponse> {
+    return request<ShippingCalculationResponse>('/orders/shipping/calculate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getOrderTracking(orderId: string): Promise<OrderTrackingResponse> {
+    return request<OrderTrackingResponse>(`/orders/${orderId}/tracking`);
+  },
+
+  async trackOrderLookup(data: OrderTrackLookupRequest): Promise<OrderTrackingResponse> {
+    return request<OrderTrackingResponse>('/orders/track-lookup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async sendPhoneOtp(phoneNumber: string): Promise<SendPhoneOtpResponse> {
+    return request<SendPhoneOtpResponse>('/orders/phone/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    });
+  },
+
+  async verifyPhoneOtp(phoneNumber: string, code: string): Promise<VerifyPhoneOtpResponse> {
+    return request<VerifyPhoneOtpResponse>('/orders/phone/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, code }),
+    });
+  },
+
+  async validatePromo(data: ValidatePromoRequest): Promise<ValidatePromoResponse> {
+    return request<ValidatePromoResponse>('/orders/promo/validate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   async createOrder(data: CreateOrderRequest): Promise<OrderDto> {
     return request<OrderDto>('/orders', {
       method: 'POST',
@@ -538,7 +734,7 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch('/api/media/upload', {
+    const response = await fetch(`${API_BASE}/media/upload`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -551,6 +747,11 @@ export const api = {
       const errorDetails = payload.errors?.join(', ') || payload.message || 'Media upload failed';
       throw new Error(errorDetails);
     }
+
+    if (payload.data && payload.data.url) {
+      payload.data.url = resolveMediaUrl(payload.data.url);
+    }
+
     return payload.data;
   },
 

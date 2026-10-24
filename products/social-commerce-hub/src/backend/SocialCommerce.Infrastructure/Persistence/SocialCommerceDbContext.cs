@@ -47,6 +47,13 @@ public class SocialCommerceDbContext : DbContext
             b.HasIndex(m => m.Slug).IsUnique();
             b.Property(m => m.Email).IsRequired().HasMaxLength(255);
             b.Property(m => m.Balance).HasPrecision(18, 2);
+            b.Property(m => m.Tagline).HasMaxLength(300).IsRequired(false);
+            b.Property(m => m.Bio).HasMaxLength(2000).IsRequired(false);
+            b.Property(m => m.AvatarUrl).HasMaxLength(1000).IsRequired(false);
+            b.Property(m => m.BannerUrl).HasMaxLength(1000).IsRequired(false);
+            b.Property(m => m.Phone).HasMaxLength(50).IsRequired(false);
+            b.Property(m => m.Address).HasMaxLength(300).IsRequired(false);
+            b.Property(m => m.City).HasMaxLength(100).IsRequired(false);
         });
 
         // Product Configuration
@@ -71,11 +78,16 @@ public class SocialCommerceDbContext : DbContext
             b.Property(o => o.MerchantNetAmount).HasPrecision(18, 2);
             b.Property(o => o.PlatformFeeRate).HasPrecision(5, 4);
 
-            b.Property(o => o.PaymentMethod).HasMaxLength(50);
-            b.Property(o => o.PaymentReference).HasMaxLength(100);
-            b.Property(o => o.PaymentInstructions).HasMaxLength(1000);
+            b.Property(o => o.PaymentMethod).HasMaxLength(50).IsRequired(false);
+            b.Property(o => o.PaymentReference).HasMaxLength(100).IsRequired(false);
+            b.Property(o => o.PaymentInstructions).HasMaxLength(1000).IsRequired(false);
             b.Property(o => o.PaymentExpiresAtUtc);
-            b.Property(o => o.SenderWalletOrReference).HasMaxLength(100);
+            b.Property(o => o.SenderWalletOrReference).HasMaxLength(100).IsRequired(false);
+            b.Property(o => o.CustomerPhone).HasMaxLength(50).IsRequired(false);
+            b.Property(o => o.BuildingDetails).HasMaxLength(255).IsRequired(false);
+            b.Property(o => o.PromoCode).HasMaxLength(50).IsRequired(false);
+            b.Property(o => o.PaymentOrderId).HasMaxLength(255).IsRequired(false);
+            b.Property(o => o.PaymentTransactionId).HasMaxLength(255).IsRequired(false);
 
             b.HasMany(o => o.Items)
              .WithOne()

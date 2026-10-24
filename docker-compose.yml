@@ -1,0 +1,80 @@
+services:
+  # ========================================================
+  # Redis: Distributed In-Memory Cache & Session Store
+  # ========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: social-commerce-redis
+    command: redis-server --appendonly yes --save 60 1
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - social-commerce-net
+    restart: unless-stopped
+
+  # ========================================================
+  # Backend: ASP.NET Core (.NET 10 LTS) Web API
+  # ========================================================
+  backend:
+    build:
+      context: ./products/social-commerce-hub/src/backend
+      dockerfile: Dockerfile
+    container_name: social-commerce-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/social_commerce.db
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
+      - Jwt__Secret=${JWT_SECRET:-EnterpriseSuperSecretKeySocialCommerceProduction2026_HighSecurity!}
+      - Jwt__Issuer=${JWT_ISSUER:-SocialCommerceApi}
+      - Jwt__Audience=${JWT_AUDIENCE:-SocialCommerceClient}
+    ports:
+      - "5271:8080"
+    volumes:
+      - backend_data:/app/data
+      - backend_uploads:/app/wwwroot/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - social-commerce-net
+    restart: unless-stopped
+
+  # ========================================================
+  # Frontend: React 19 + Vite (Served via Nginx Alpine)
+  # ========================================================
+  frontend:
+    build:
+      context: ./products/social-commerce-hub/src/frontend
+      dockerfile: Dockerfile
+    container_name: social-commerce-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - social-commerce-net
+    restart: unless-stopped
+
+# ========================================================
+# Persistent Volumes & Network Topology
+# ========================================================
+volumes:
+  redis_data:
+    name: social-commerce-redis-data
+  backend_data:
+    name: social-commerce-db-data
+  backend_uploads:
+    name: social-commerce-uploads-data
+
+networks:
+  social-commerce-net:
+    name: social-commerce-network
+    driver: bridge

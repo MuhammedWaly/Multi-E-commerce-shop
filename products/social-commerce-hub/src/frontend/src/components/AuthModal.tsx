@@ -155,21 +155,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative my-8">
+      <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative my-8">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 end-5 w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs text-slate-300 font-bold transition-colors cursor-pointer"
+          className="absolute top-5 end-5 w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-sm text-slate-300 font-bold transition-colors cursor-pointer"
         >
           ✕
         </button>
 
         {/* Modal Header */}
-        <div className="space-y-1.5 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 text-2xl mb-1 shadow-inner">
-            {mode === 'forgot' ? '🔑' : mode === 'reset' ? '🔄' : '🔐'}
-          </div>
+        <div className="space-y-2 text-center">
           <h2 className="text-2xl font-black text-white tracking-tight">
             {mode === 'signin'
               ? t.authModal.welcomeBack
@@ -179,7 +176,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               ? t.authModal.forgotTitle
               : t.authModal.resetTitle}
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-sm text-slate-400">
             {mode === 'signin'
               ? t.authModal.signInSubtitle
               : mode === 'signup'
@@ -192,7 +189,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Mode Switcher Tabs (Only in signin & signup modes) */}
         {(mode === 'signin' || mode === 'signup') && (
-          <div className="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold">
+          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 text-sm font-semibold">
             <button
               type="button"
               onClick={() => {
@@ -261,12 +258,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-xl shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 rounded-xl text-sm font-semibold min-h-[46px] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                `✉️ ${t.authModal.sendResetBtn}`
+                t.authModal.sendResetBtn
               )}
             </button>
 
@@ -353,12 +350,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-xl shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 rounded-xl text-sm font-semibold min-h-[46px] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                `🔒 ${t.authModal.setNewPasswordBtn}`
+                t.authModal.setNewPasswordBtn
               )}
             </button>
 
@@ -520,7 +517,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-xl shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 rounded-xl text-sm font-semibold min-h-[46px] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -546,7 +543,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={() => handleQuickDemoLogin('customer@example.com')}
                 className="p-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl text-center text-[10px] text-slate-300 transition-colors cursor-pointer"
               >
-                <div className="font-bold text-white">👤 {t.authModal.demoShopper}</div>
+                <div className="font-bold text-white">{t.authModal.demoShopper}</div>
                 <div className="text-slate-500 truncate">Buyer User</div>
               </button>
               <button
@@ -555,7 +552,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={() => handleQuickDemoLogin('sari@example.com')}
                 className="p-2 bg-slate-950 hover:bg-slate-800 border border-indigo-500/30 rounded-xl text-center text-[10px] text-indigo-300 transition-colors cursor-pointer"
               >
-                <div className="font-bold text-indigo-300">🏬 {t.authModal.demoSari}</div>
+                <div className="font-bold text-indigo-300">{t.authModal.demoSari}</div>
                 <div className="text-slate-500 truncate">Merchant</div>
               </button>
               <button
@@ -564,7 +561,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={() => handleQuickDemoLogin('craft@example.com')}
                 className="p-2 bg-slate-950 hover:bg-slate-800 border border-purple-500/30 rounded-xl text-center text-[10px] text-purple-300 transition-colors cursor-pointer"
               >
-                <div className="font-bold text-purple-300">👜 {t.authModal.demoCairo}</div>
+                <div className="font-bold text-purple-300">{t.authModal.demoCairo}</div>
                 <div className="text-slate-500 truncate">Merchant</div>
               </button>
               <button
@@ -573,7 +570,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={() => handleQuickDemoLogin('admin@socialhub.eg')}
                 className="p-2 bg-slate-950 hover:bg-slate-800 border border-rose-500/30 rounded-xl text-center text-[10px] text-rose-300 transition-colors cursor-pointer"
               >
-                <div className="font-bold text-rose-300">🛡️ {t.authModal.demoAdmin}</div>
+                <div className="font-bold text-rose-300">{t.authModal.demoAdmin}</div>
                 <div className="text-slate-500 truncate">Platform Lead</div>
               </button>
             </div>

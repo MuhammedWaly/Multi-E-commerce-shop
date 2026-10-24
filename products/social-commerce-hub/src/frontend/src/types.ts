@@ -27,6 +27,8 @@ export interface Merchant {
   reviewsCount: number;
   verified: boolean;
   location: string;
+  city?: string;
+  phone?: string;
   productCount: number;
 }
 

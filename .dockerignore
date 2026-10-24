@@ -1,0 +1,12 @@
+**/.git
+**/.github
+**/.agents
+**/.gemini
+**/node_modules
+**/dist
+**/bin
+**/obj
+**/logs
+**/*.db
+**/*.db-shm
+**/*.db-wal

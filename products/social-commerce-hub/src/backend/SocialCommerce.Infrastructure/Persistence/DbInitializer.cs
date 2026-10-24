@@ -13,6 +13,8 @@ public static class DbInitializer
         // Apply schema updates safely to existing SQLite database if needed
         await EnsureUserColumnsExistAsync(context);
         await EnsureOrderColumnsExistAsync(context);
+        await EnsureMerchantColumnsExistAsync(context);
+        await EnsureDataSanityAsync(context);
 
         Merchant? sariMerchant = null;
         Merchant? cairoLeather = null;
@@ -95,7 +97,17 @@ public static class DbInitializer
             "ALTER TABLE Orders ADD COLUMN PaymentReference TEXT NULL;",
             "ALTER TABLE Orders ADD COLUMN PaymentInstructions TEXT NULL;",
             "ALTER TABLE Orders ADD COLUMN PaymentExpiresAtUtc TEXT NULL;",
-            "ALTER TABLE Orders ADD COLUMN SenderWalletOrReference TEXT NULL;"
+            "ALTER TABLE Orders ADD COLUMN SenderWalletOrReference TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN ShippingFee REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Orders ADD COLUMN DistanceKm REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Orders ADD COLUMN EstimatedDeliveryMinutes INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE Orders ADD COLUMN DeliveryLatitude REAL NULL;",
+            "ALTER TABLE Orders ADD COLUMN DeliveryLongitude REAL NULL;",
+            "ALTER TABLE Orders ADD COLUMN CustomerPhone TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN BuildingDetails TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN PromoCode TEXT NULL;",
+            "ALTER TABLE Orders ADD COLUMN DiscountAmount REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Orders ADD COLUMN IsPhoneVerified INTEGER NOT NULL DEFAULT 0;"
         };
 
         foreach (var sql in columns)
@@ -107,6 +119,67 @@ public static class DbInitializer
             catch
             {
                 // Column already exists or provider does not support raw alter; ignore safely
+            }
+        }
+    }
+
+    private static async Task EnsureMerchantColumnsExistAsync(SocialCommerceDbContext context)
+    {
+        var columns = new[]
+        {
+            "ALTER TABLE Merchants ADD COLUMN Latitude REAL NOT NULL DEFAULT 30.0626;",
+            "ALTER TABLE Merchants ADD COLUMN Longitude REAL NOT NULL DEFAULT 31.2223;",
+            "ALTER TABLE Merchants ADD COLUMN Address TEXT NULL DEFAULT 'Zamalek, Cairo';",
+            "ALTER TABLE Merchants ADD COLUMN City TEXT NULL DEFAULT 'Cairo';",
+            "ALTER TABLE Merchants ADD COLUMN Tagline TEXT NULL DEFAULT '';",
+            "ALTER TABLE Merchants ADD COLUMN Bio TEXT NULL DEFAULT '';",
+            "ALTER TABLE Merchants ADD COLUMN AvatarUrl TEXT NULL DEFAULT '';",
+            "ALTER TABLE Merchants ADD COLUMN BannerUrl TEXT NULL DEFAULT '';",
+            "ALTER TABLE Merchants ADD COLUMN Phone TEXT NULL DEFAULT '';"
+        };
+
+        foreach (var sql in columns)
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(sql);
+            }
+            catch
+            {
+                // Column already exists or provider does not support raw alter; ignore safely
+            }
+        }
+    }
+
+    private static async Task EnsureDataSanityAsync(SocialCommerceDbContext context)
+    {
+        var repairs = new[]
+        {
+            "UPDATE Orders SET CustomerEmail = 'customer@example.com' WHERE CustomerEmail = 'youssef@example.com';",
+            "UPDATE Orders SET PaymentMethod = 'PayPal' WHERE PaymentMethod IS NULL OR PaymentMethod = '';",
+            "UPDATE Orders SET ShippingFee = 0 WHERE ShippingFee IS NULL;",
+            "UPDATE Orders SET DistanceKm = 0 WHERE DistanceKm IS NULL;",
+            "UPDATE Orders SET EstimatedDeliveryMinutes = 0 WHERE EstimatedDeliveryMinutes IS NULL;",
+            "UPDATE Orders SET DiscountAmount = 0 WHERE DiscountAmount IS NULL;",
+            "UPDATE Orders SET IsPhoneVerified = 0 WHERE IsPhoneVerified IS NULL;",
+            "UPDATE Merchants SET Tagline = '' WHERE Tagline IS NULL;",
+            "UPDATE Merchants SET Bio = '' WHERE Bio IS NULL;",
+            "UPDATE Merchants SET AvatarUrl = '' WHERE AvatarUrl IS NULL;",
+            "UPDATE Merchants SET BannerUrl = '' WHERE BannerUrl IS NULL;",
+            "UPDATE Merchants SET Phone = '' WHERE Phone IS NULL;",
+            "UPDATE Merchants SET Address = 'Zamalek, Cairo' WHERE Address IS NULL;",
+            "UPDATE Merchants SET City = 'Cairo' WHERE City IS NULL;"
+        };
+
+        foreach (var sql in repairs)
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(sql);
+            }
+            catch
+            {
+                // Ignore safely if table or column doesn't exist yet
             }
         }
     }

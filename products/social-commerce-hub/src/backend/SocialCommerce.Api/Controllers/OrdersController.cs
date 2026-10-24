@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using SocialCommerce.Application.Common;
 using SocialCommerce.Application.DTOs;
 using SocialCommerce.Application.Interfaces;
+using SocialCommerce.Application.Shipping;
+using SocialCommerce.Infrastructure.Services;
 
 namespace SocialCommerce.Api.Controllers;
 
@@ -11,10 +13,12 @@ namespace SocialCommerce.Api.Controllers;
 public class OrdersController : BaseApiController
 {
     private readonly IOrderService _orderService;
+    private readonly IOtpVerificationService _otpService;
 
-    public OrdersController(IOrderService orderService)
+    public OrdersController(IOrderService orderService, IOtpVerificationService? otpService = null)
     {
         _orderService = orderService;
+        _otpService = otpService ?? new OtpVerificationService();
     }
 
     /// <summary>
@@ -29,6 +33,110 @@ public class OrdersController : BaseApiController
     {
         var order = await _orderService.CreateOrderAsync(request, ct);
         return CreatedSuccess($"/api/orders/{order.Id}", order, "Order placed successfully.");
+    }
+
+    /// <summary>
+    /// Sends a 4-digit SMS/WhatsApp OTP code to verify customer mobile before dispatch
+    /// </summary>
+    [HttpPost("phone/send-otp")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<SendOtpResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public ActionResult<ApiResponse<SendOtpResult>> SendPhoneOtp([FromBody] SendPhoneOtpRequest request)
+    {
+        var result = _otpService.SendOtp(request.PhoneNumber);
+        if (!result.Success)
+        {
+            return Failed<SendOtpResult>(result.Message, "OTP dispatch failed.", StatusCodes.Status400BadRequest);
+        }
+        return Success(result, result.Message);
+    }
+
+    /// <summary>
+    /// Verifies customer 4-digit SMS/WhatsApp OTP code
+    /// </summary>
+    [HttpPost("phone/verify-otp")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<VerifyOtpResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    public ActionResult<ApiResponse<VerifyOtpResult>> VerifyPhoneOtp([FromBody] VerifyPhoneOtpRequest request)
+    {
+        var result = _otpService.VerifyOtp(request.PhoneNumber, request.Code);
+        if (!result.Success)
+        {
+            return Failed<VerifyOtpResult>(result.Message, "OTP verification failed.", StatusCodes.Status400BadRequest);
+        }
+        return Success(result, result.Message);
+    }
+
+    /// <summary>
+    /// Calculates distance-based shipping fee and estimated transit time
+    /// </summary>
+    [HttpPost("shipping/calculate")]
+    [ProducesResponseType(typeof(ApiResponse<ShippingCalculationResult>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<ShippingCalculationResult>>> CalculateShipping(
+        [FromBody] CalculateShippingDto request,
+        CancellationToken ct = default)
+    {
+        var result = await _orderService.CalculateShippingAsync(request, ct);
+        return Success(result, "Shipping calculated successfully.");
+    }
+
+    /// <summary>
+    /// Retrieves live visual delivery tracking for an order
+    /// </summary>
+    [HttpGet("{id:guid}/tracking")]
+    [ProducesResponseType(typeof(ApiResponse<OrderTrackingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<OrderTrackingDto>>> GetOrderTracking(
+        Guid id,
+        CancellationToken ct = default)
+    {
+        var tracking = await _orderService.GetOrderTrackingAsync(id, ct);
+        if (tracking == null)
+        {
+            return Failed<OrderTrackingDto>($"Order with ID '{id}' was not found.", "Order not found.", StatusCodes.Status404NotFound);
+        }
+
+        return Success(tracking, "Order tracking retrieved successfully.");
+    }
+
+    /// <summary>
+    /// Securely looks up order tracking for guests without requiring authentication
+    /// </summary>
+    [HttpPost("track-lookup")]
+    [ProducesResponseType(typeof(ApiResponse<OrderTrackingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ApiResponse<OrderTrackingDto>>> TrackLookup(
+        [FromBody] OrderTrackLookupRequest request,
+        CancellationToken ct = default)
+    {
+        var tracking = await _orderService.TrackLookupAsync(request, ct);
+        if (tracking == null)
+        {
+            return Failed<OrderTrackingDto>("No order matching the provided Order ID and email/phone was found. / لم يتم العثور على طلب مطابق لرقم الطلب والبريد/الهاتف المدخل.", "Order not found.", StatusCodes.Status404NotFound);
+        }
+
+        return Success(tracking, "Order tracking retrieved successfully.");
+    }
+
+    /// <summary>
+    /// Validates promotional coupon codes for discounts
+    /// </summary>
+    [HttpPost("promo/validate")]
+    [ProducesResponseType(typeof(ApiResponse<ValidatePromoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<ValidatePromoResponse>), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ApiResponse<ValidatePromoResponse>>> ValidatePromo(
+        [FromBody] ValidatePromoRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _orderService.ValidatePromoCodeAsync(request, ct);
+        if (!result.IsValid)
+        {
+            return Failed<ValidatePromoResponse>(result.ErrorMessage ?? "Invalid coupon code.", "Validation failed.", StatusCodes.Status400BadRequest);
+        }
+
+        return Success(result, "Promo coupon validated successfully.");
     }
 
     /// <summary>
